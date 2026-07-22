@@ -1,0 +1,189 @@
+"use client";
+
+// Trimmed port of overlays.jsx's ExpandedCard + card.jsx's ExpandedBody.
+// Covers title + the per-type body editor; cover picker, type-switching,
+// and the recurrence/auto-fill Schedule section aren't ported yet.
+import { useState } from "react";
+import type { Card } from "@/lib/types";
+import { typeMeta } from "@/lib/cardTypes";
+
+function pct(checklist: Card["checklist"]) {
+  if (!checklist || !checklist.length) return 0;
+  return Math.round((checklist.filter((c) => c.done).length / checklist.length) * 100);
+}
+
+function Checklist({ items, onChange }: { items: Card["checklist"]; onChange: (v: { text: string; done: boolean }[]) => void }) {
+  const [text, setText] = useState("");
+  const list = items || [];
+  function toggle(i: number) {
+    onChange(list.map((it, idx) => (idx === i ? { ...it, done: !it.done } : it)));
+  }
+  function add() {
+    const t = text.trim();
+    if (!t) return;
+    onChange([...list, { text: t, done: false }]);
+    setText("");
+  }
+  function del(i: number) {
+    onChange(list.filter((_, idx) => idx !== i));
+  }
+  return (
+    <div className="check">
+      {list.map((it, i) => (
+        <div key={i} className={"check-row" + (it.done ? " checked" : "")}>
+          <button className="box" onClick={() => toggle(i)} aria-label="toggle">
+            {it.done ? <span className="tick" /> : null}
+          </button>
+          <span className="check-text">{it.text}</span>
+          <button className="x" onClick={() => del(i)} aria-label="remove">×</button>
+        </div>
+      ))}
+      <div className="check-add">
+        <input
+          value={text}
+          placeholder="Add a step…"
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") add(); }}
+        />
+        <button onClick={add}>Add</button>
+      </div>
+    </div>
+  );
+}
+
+function ExpandedBody({ card, onUpdate }: { card: Card; onUpdate: (patch: Partial<Card>) => void }) {
+  if (card.type === "habit") {
+    const days = card.days || [];
+    const todayIdx = days.length - 1;
+    function toggleDay(idx: number) {
+      const next = days.slice();
+      next[idx] = !next[idx];
+      let s = 0;
+      for (let i = next.length - 1; i >= 0; i--) { if (next[i]) s++; else break; }
+      onUpdate({ days: next, streak: s });
+    }
+    return (
+      <div className="body">
+        <div className="streak-big">
+          <span className="mono streak-num">{card.streak || 0}</span>
+          <span className="streak-cap">day streak</span>
+        </div>
+        <div className="month-grid">
+          {days.map((on, i) => (
+            <button key={i} className={"mday" + (on ? " mday-on" : "") + (i === todayIdx ? " mday-today" : "")} onClick={() => toggleDay(i)} />
+          ))}
+        </div>
+        <button className="big-btn" onClick={() => toggleDay(todayIdx)}>
+          {days[todayIdx] ? "Done today ✓" : "Mark today done"}
+        </button>
+        <label className="field">
+          <span className="field-label">Cadence</span>
+          <input className="inp" value={card.cadence || ""} onChange={(e) => onUpdate({ cadence: e.target.value })} />
+        </label>
+      </div>
+    );
+  }
+
+  if (card.type === "bill") {
+    return (
+      <div className="body">
+        <div className="amount-edit">
+          <span className="cur mono">$</span>
+          <input
+            className="amount-inp mono"
+            type="number"
+            value={card.amount ?? 0}
+            onChange={(e) => onUpdate({ amount: parseFloat(e.target.value) || 0 })}
+          />
+        </div>
+        <button className={"big-btn" + (card.paid ? " big-btn-on" : "")} onClick={() => onUpdate({ paid: !card.paid })}>
+          {card.paid ? "Paid ✓" : "Mark as paid"}
+        </button>
+        <div className="two">
+          <label className="field"><span className="field-label">Due</span>
+            <input className="inp" value={card.due || ""} onChange={(e) => onUpdate({ due: e.target.value })} />
+          </label>
+          <label className="field"><span className="field-label">Repeats</span>
+            <input className="inp" value={card.recur || ""} onChange={(e) => onUpdate({ recur: e.target.value })} />
+          </label>
+        </div>
+        <label className="field"><span className="field-label">Category</span>
+          <input className="inp" value={card.category || ""} onChange={(e) => onUpdate({ category: e.target.value })} />
+        </label>
+        <label className="field"><span className="field-label">Notes</span>
+          <input className="inp" value={card.notes || ""} onChange={(e) => onUpdate({ notes: e.target.value })} />
+        </label>
+        <label className="field"><span className="field-label">Calendar date</span>
+          <input className="inp" type="date" value={card.date || ""} onChange={(e) => onUpdate({ date: e.target.value })} />
+        </label>
+      </div>
+    );
+  }
+
+  if (card.type === "note") {
+    return (
+      <div className="body">
+        <textarea className="inp area tall" value={card.body || ""} placeholder="Write anything…" onChange={(e) => onUpdate({ body: e.target.value })} />
+        <label className="field"><span className="field-label">Calendar date</span>
+          <input className="inp" type="date" value={card.date || ""} onChange={(e) => onUpdate({ date: e.target.value })} />
+        </label>
+      </div>
+    );
+  }
+
+  const p = pct(card.checklist);
+  return (
+    <div className="body">
+      <div className="body-row">
+        <div className="bar"><div className="bar-fill" style={{ width: p + "%" }} /></div>
+        <span className="mono tiny">{p}%</span>
+      </div>
+      <Checklist items={card.checklist} onChange={(v) => onUpdate({ checklist: v })} />
+      {card.type === "task" ? (
+        <label className="field"><span className="field-label">Due</span>
+          <input className="inp" value={card.due || ""} placeholder="e.g. Today, Fri, Jun 30" onChange={(e) => onUpdate({ due: e.target.value })} />
+        </label>
+      ) : null}
+      <label className="field"><span className="field-label">Notes</span>
+        <textarea className="inp area" value={card.notes || ""} placeholder="Notes…" onChange={(e) => onUpdate({ notes: e.target.value })} />
+      </label>
+      <label className="field"><span className="field-label">Calendar date</span>
+        <input className="inp" type="date" value={card.date || ""} onChange={(e) => onUpdate({ date: e.target.value })} />
+      </label>
+    </div>
+  );
+}
+
+export function ExpandedCard({
+  card,
+  onClose,
+  onUpdate,
+  onDelete,
+}: {
+  card: Card;
+  onClose: () => void;
+  onUpdate: (patch: Partial<Card>) => void;
+  onDelete: () => void;
+}) {
+  const T = typeMeta(card.type);
+  return (
+    <div className="overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="panel" style={{ "--hue": T.hue } as React.CSSProperties} onMouseDown={(e) => e.stopPropagation()}>
+        <div className="panel-head">
+          <span className="type-tag big"><span className="swatch" />{T.label}</span>
+          <div className="panel-actions">
+            <button className="icon-btn" onClick={onDelete}>Delete</button>
+            <button className="icon-btn round" onClick={onClose}>×</button>
+          </div>
+        </div>
+        <input
+          className="panel-title"
+          value={card.title}
+          onChange={(e) => onUpdate({ title: e.target.value })}
+          placeholder="Untitled"
+        />
+        <ExpandedBody card={card} onUpdate={onUpdate} />
+      </div>
+    </div>
+  );
+}
