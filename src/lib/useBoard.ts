@@ -197,6 +197,16 @@ export function useBoard() {
     await supabase.from("slots").update({ name }).eq("id", slotId);
   }
 
+  // Assign an explicit display order (0..n) to the given cards, by id
+  // position. Mirrors app.jsx's applyCardOrder() — used by the Note and
+  // custom-type Section views' drag-to-reorder.
+  async function applyCardOrder(orderedIds: string[]) {
+    const rank: Record<string, number> = {};
+    orderedIds.forEach((id, i) => { rank[id] = i; });
+    setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (c.id in rank ? { ...c, card_order: rank[c.id] } : c)) })));
+    await Promise.all(orderedIds.map((id, i) => supabase.from("cards").update({ card_order: i }).eq("id", id)));
+  }
+
   // Stamp a dated COPY of a reusable (undated) card onto a calendar day —
   // the original stays in the tray so it can be reused across many days.
   // Mirrors app.jsx's stampCard().
@@ -289,6 +299,6 @@ export function useBoard() {
 
   return {
     board, loading, userId, reload, addCard, updateCard, deleteCard, merge, unstack, ungroup, renameSlot,
-    stampCard, extendBills, bulkDeleteBills, bulkMarkBills,
+    stampCard, extendBills, bulkDeleteBills, bulkMarkBills, applyCardOrder,
   };
 }

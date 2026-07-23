@@ -1,18 +1,28 @@
 "use client";
 
-export type AppView = "today" | "board" | "calendar" | "bills";
+import { BUILTIN_CARD_TYPES } from "@/lib/cardTypes";
+
+export type AppView = "today" | "board" | "calendar" | "bills" | "section";
+
+// Types with their own dedicated tab (Bills) are excluded from the
+// section-chip row — clicking them would just duplicate the Bills tab.
+const SECTION_TYPES = Object.values(BUILTIN_CARD_TYPES).filter((t) => t.key !== "bill");
 
 export function Topbar({
   greeting,
   dateStr,
   view,
+  sectionType,
   onView,
+  onSection,
   onAdd,
 }: {
   greeting: string;
   dateStr: string;
   view: AppView;
+  sectionType: string | null;
   onView: (v: AppView) => void;
+  onSection: (type: string) => void;
   onAdd: () => void;
 }) {
   return (
@@ -40,6 +50,17 @@ export function Topbar({
           <button className={"vt" + (view === "calendar" ? " on" : "")} onClick={() => onView("calendar")}>Calendar</button>
           <button className={"vt" + (view === "bills" ? " on" : "")} onClick={() => onView("bills")}>Bills</button>
         </div>
+        <span className="vt-divider" />
+        {SECTION_TYPES.map((t) => (
+          <button
+            key={t.key}
+            className={"filter-chip chip-section" + (view === "section" && sectionType === t.key ? " active" : "")}
+            style={{ "--hue": t.hue } as React.CSSProperties}
+            onClick={() => onSection(t.key)}
+          >
+            <span className="swatch" />{t.label}<span className="chip-arrow">›</span>
+          </button>
+        ))}
       </div>
     </>
   );

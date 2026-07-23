@@ -9,6 +9,7 @@ import { BoardView } from "@/components/board-view";
 import { TodayView } from "@/components/today-view";
 import { CalendarView } from "@/components/calendar-view";
 import { BillsView } from "@/components/bills-view";
+import { SectionView } from "@/components/section-view";
 import { AddMenu } from "@/components/add-menu";
 import { ExpandedCard } from "@/components/expanded-card";
 import { StackFan } from "@/components/stack-fan";
@@ -21,8 +22,12 @@ type Open =
   | null;
 
 export default function HomeClient() {
-  const { board, loading, addCard, updateCard, deleteCard, merge, unstack, ungroup, stampCard, extendBills, bulkDeleteBills, bulkMarkBills } = useBoard();
+  const {
+    board, loading, addCard, updateCard, deleteCard, merge, unstack, ungroup,
+    stampCard, extendBills, bulkDeleteBills, bulkMarkBills, applyCardOrder,
+  } = useBoard();
   const [view, setView] = useState<AppView>("today");
+  const [sectionType, setSectionType] = useState<string | null>(null);
   const [open, setOpen] = useState<Open>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [pendingDate, setPendingDate] = useState<string | null>(null);
@@ -50,6 +55,13 @@ export default function HomeClient() {
     return { label: open.label, cards };
   }, [open, board]);
 
+  const sectionCards = useMemo(() => {
+    if (view !== "section" || !sectionType) return [];
+    const out: Card[] = [];
+    board.forEach((s) => s.cards.forEach((c) => { if (c.type === sectionType) out.push(c); }));
+    return out;
+  }, [view, sectionType, board]);
+
   const greeting = (() => {
     const h = new Date().getHours();
     return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
@@ -69,7 +81,15 @@ export default function HomeClient() {
 
   return (
     <div className="app">
-      <Topbar greeting={greeting} dateStr={dateStr} view={view} onView={setView} onAdd={() => { setPendingDate(null); setAddOpen(true); }} />
+      <Topbar
+        greeting={greeting}
+        dateStr={dateStr}
+        view={view}
+        sectionType={sectionType}
+        onView={(v) => { setView(v); setSectionType(null); }}
+        onSection={(type) => { setView("section"); setSectionType(type); }}
+        onAdd={() => { setPendingDate(null); setAddOpen(true); }}
+      />
 
       {view === "today" ? (
         <TodayView
@@ -95,7 +115,7 @@ export default function HomeClient() {
           onAddOnDate={(date) => { setPendingDate(date); setAddOpen(true); }}
           onAddReusable={() => { setPendingDate(null); setAddOpen(true); }}
         />
-      ) : (
+      ) : view === "bills" ? (
         <BillsView
           board={board}
           onUpdate={updateCard}
@@ -105,7 +125,16 @@ export default function HomeClient() {
           onBulkDelete={bulkDeleteBills}
           onBulkMark={bulkMarkBills}
         />
-      )}
+      ) : sectionType ? (
+        <SectionView
+          cards={sectionCards}
+          type={sectionType}
+          onUpdate={updateCard}
+          onOpen={(c) => setOpen({ kind: "card", cardId: c.id })}
+          onAdd={handleAdd}
+          onReorder={applyCardOrder}
+        />
+      ) : null}
 
       {openCard ? (
         <ExpandedCard
