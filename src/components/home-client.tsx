@@ -20,6 +20,7 @@ import { QuickAdd } from "@/components/quick-add";
 import { SearchModal } from "@/components/search-modal";
 import { Onboarding } from "@/components/onboarding";
 import { SettingsModal } from "@/components/settings-modal";
+import { Toast } from "@/components/toast";
 
 type Open =
   | { kind: "card"; cardId: string }
@@ -30,7 +31,7 @@ type Open =
 export default function HomeClient() {
   const {
     board, loading, customTypes, addCard, updateCard, deleteCard, merge, unstack, ungroup,
-    stampCard, extendBills, bulkDeleteBills, bulkMarkBills, applyCardOrder,
+    stampCard, extendBills, bulkDeleteBills, bulkMarkBills, applyCardOrder, restoreCards,
     createCustomType, updateCustomType, deleteCustomType,
   } = useBoard();
   const { profile, loading: profileLoading, updateProfile, updateTweaks } = useProfile();
@@ -43,6 +44,7 @@ export default function HomeClient() {
   const [quickOpen, setQuickOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; cards: Card[] } | null>(null);
 
   useEffect(() => {
     if (profile) applyTheme(profile.tweaks);
@@ -144,6 +146,27 @@ export default function HomeClient() {
     setSectionType(null);
   }
 
+  function handleDeleteCard() {
+    if (!openCard) return;
+    const snapshot = openCard;
+    deleteCard(openCard.id);
+    setOpen(null);
+    setToast({ msg: "Card deleted", cards: [snapshot] });
+  }
+
+  function handleBulkDeleteBills(ids: string[]) {
+    if (!ids.length) return;
+    const snapshots: Card[] = [];
+    board.forEach((s) => s.cards.forEach((c) => { if (ids.includes(c.id)) snapshots.push(c); }));
+    bulkDeleteBills(ids);
+    setToast({ msg: `${ids.length} bill${ids.length === 1 ? "" : "s"} deleted`, cards: snapshots });
+  }
+
+  function undoToast() {
+    if (toast?.cards.length) restoreCards(toast.cards);
+    setToast(null);
+  }
+
   if (loading || profileLoading) {
     return <div className="app"><div className="today-empty" style={{ padding: 40, textAlign: "center" }}>Loading your board…</div></div>;
   }
@@ -200,7 +223,7 @@ export default function HomeClient() {
           onOpen={(c) => setOpen({ kind: "card", cardId: c.id })}
           onAddBill={() => handleAdd("bill")}
           onExtend={extendBills}
-          onBulkDelete={bulkDeleteBills}
+          onBulkDelete={handleBulkDeleteBills}
           onBulkMark={bulkMarkBills}
         />
       ) : sectionType ? (
@@ -221,7 +244,7 @@ export default function HomeClient() {
           card={openCard}
           onClose={() => setOpen(null)}
           onUpdate={(patch) => updateCard(openCard.id, patch)}
-          onDelete={() => { deleteCard(openCard.id); setOpen(null); }}
+          onDelete={handleDeleteCard}
         />
       ) : null}
 
@@ -278,6 +301,8 @@ export default function HomeClient() {
           onSaveTweaks={updateTweaks}
         />
       ) : null}
+
+      {toast ? <Toast msg={toast.msg} actionLabel="Undo" onAction={undoToast} onDismiss={() => setToast(null)} /> : null}
     </div>
   );
 }

@@ -7,19 +7,20 @@ import { useMemo } from "react";
 import type { BoardSlot, Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
 import { todayISO, shortISO, money } from "@/lib/date";
+import * as fx from "@/lib/fx";
 
 function isDone(c: Card) {
   return !!(c.checklist && c.checklist.length && c.checklist.every((x) => x.done));
 }
 
-function TodayRow({ card, onOpen, onPay, onMark }: { card: Card; onOpen: (c: Card, rect: DOMRect | null) => void; onPay: (c: Card) => void; onMark: (c: Card) => void }) {
+function TodayRow({ card, onOpen, onPay, onMark }: { card: Card; onOpen: (c: Card, rect: DOMRect | null) => void; onPay: (c: Card, el: HTMLElement) => void; onMark: (c: Card, el: HTMLElement) => void }) {
   const T = typeMeta(card.type);
   return (
     <div className="trow" style={{ "--hue": T.hue } as React.CSSProperties}>
       {card.type === "bill" ? (
-        <button className={"paydot" + (card.paid ? " on" : "")} title="Mark paid" onClick={() => { if (!card.paid) onPay(card); }} />
+        <button className={"paydot" + (card.paid ? " on" : "")} title="Mark paid" onClick={(e) => { if (!card.paid) onPay(card, e.currentTarget); }} />
       ) : card.type === "habit" ? (
-        <button className="trow-habit" onClick={() => onMark(card)} title="Mark done">✓</button>
+        <button className="trow-habit" onClick={(e) => onMark(card, e.currentTarget)} title="Mark done">✓</button>
       ) : (
         <span className="trow-dot" />
       )}
@@ -68,15 +69,18 @@ export function TodayView({
   });
   const weekTotal = weekBills.reduce((a, c) => a + Number(c.amount || 0), 0);
 
-  function pay(card: Card) {
+  function pay(card: Card, el: HTMLElement) {
+    fx.coin(el);
     onUpdate(card.id, { paid: true });
   }
-  function mark(card: Card) {
+  function mark(card: Card, el: HTMLElement) {
     const days = (card.days || []).slice();
     const i = days.length - 1;
     days[i] = true;
     let s = 0;
     for (let j = days.length - 1; j >= 0; j--) { if (days[j]) s++; else break; }
+    if (s === 7 || s === 30 || s === 100) fx.streak(s);
+    else fx.burst(el, { emoji: "🔥", count: 14 });
     onUpdate(card.id, { days, streak: s });
   }
 
@@ -136,7 +140,7 @@ export function TodayView({
             {habits.length ? (
               habitsRisk.length ? habitsRisk.map((c) => (
                 <div className="trisk" key={c.id} style={{ "--hue": typeMeta("habit").hue } as React.CSSProperties}>
-                  <button className="trow-habit" onClick={() => mark(c)}>✓</button>
+                  <button className="trow-habit" onClick={(e) => mark(c, e.currentTarget)}>✓</button>
                   <button className="trow-main" onClick={(e) => onOpenCard(c, e.currentTarget.getBoundingClientRect())}>
                     <span className="trow-name">{c.title}</span>
                     <span className="trow-type">{c.streak ? "🔥 " + c.streak + "-day streak" : "Start a streak"}</span>

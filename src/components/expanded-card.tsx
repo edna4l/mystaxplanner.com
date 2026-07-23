@@ -7,6 +7,7 @@ import { useState } from "react";
 import type { Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
 import { CoverPicker } from "@/components/cover-picker";
+import * as fx from "@/lib/fx";
 
 function pct(checklist: Card["checklist"]) {
   if (!checklist || !checklist.length) return 0;
@@ -16,8 +17,12 @@ function pct(checklist: Card["checklist"]) {
 function Checklist({ items, onChange }: { items: Card["checklist"]; onChange: (v: { text: string; done: boolean }[]) => void }) {
   const [text, setText] = useState("");
   const list = items || [];
-  function toggle(i: number) {
-    onChange(list.map((it, idx) => (idx === i ? { ...it, done: !it.done } : it)));
+  function toggle(i: number, srcEl: HTMLElement) {
+    const next = list.map((it, idx) => (idx === i ? { ...it, done: !it.done } : it));
+    const wasAll = list.length > 0 && list.every((x) => x.done);
+    const isAll = next.length > 0 && next.every((x) => x.done);
+    if (isAll && !wasAll) fx.burst(srcEl, { emoji: "✅", count: 20 });
+    onChange(next);
   }
   function add() {
     const t = text.trim();
@@ -32,7 +37,7 @@ function Checklist({ items, onChange }: { items: Card["checklist"]; onChange: (v
     <div className="check">
       {list.map((it, i) => (
         <div key={i} className={"check-row" + (it.done ? " checked" : "")}>
-          <button className="box" onClick={() => toggle(i)} aria-label="toggle">
+          <button className="box" onClick={(e) => toggle(i, e.currentTarget)} aria-label="toggle">
             {it.done ? <span className="tick" /> : null}
           </button>
           <span className="check-text">{it.text}</span>
@@ -61,6 +66,7 @@ function ExpandedBody({ card, onUpdate }: { card: Card; onUpdate: (patch: Partia
       next[idx] = !next[idx];
       let s = 0;
       for (let i = next.length - 1; i >= 0; i--) { if (next[i]) s++; else break; }
+      if (s > (card.streak || 0) && (s === 7 || s === 30 || s === 100)) fx.streak(s);
       onUpdate({ days: next, streak: s });
     }
     return (
@@ -97,7 +103,7 @@ function ExpandedBody({ card, onUpdate }: { card: Card; onUpdate: (patch: Partia
             onChange={(e) => onUpdate({ amount: parseFloat(e.target.value) || 0 })}
           />
         </div>
-        <button className={"big-btn" + (card.paid ? " big-btn-on" : "")} onClick={() => onUpdate({ paid: !card.paid })}>
+        <button className={"big-btn" + (card.paid ? " big-btn-on" : "")} onClick={(e) => { if (!card.paid) fx.coin(e.currentTarget); onUpdate({ paid: !card.paid }); }}>
           {card.paid ? "Paid ✓" : "Mark as paid"}
         </button>
         <div className="two">

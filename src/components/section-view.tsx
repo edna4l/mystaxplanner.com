@@ -10,6 +10,7 @@ import type { Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
 import { todayISO, shortISO } from "@/lib/date";
 import { SquareCard } from "@/components/square-card";
+import * as fx from "@/lib/fx";
 
 function byOrder(cards: Card[]) {
   return [...cards].sort((a, b) => (a.card_order == null ? 9999 : a.card_order) - (b.card_order == null ? 9999 : b.card_order));
@@ -141,6 +142,7 @@ function HabitBody({ cards, onUpdate, onOpen }: { cards: Card[]; onUpdate: (id: 
     days[i] = !days[i];
     let s = 0;
     for (let j = days.length - 1; j >= 0; j--) { if (days[j]) s++; else break; }
+    if (s > (c.streak || 0) && (s === 7 || s === 30 || s === 100)) fx.streak(s);
     onUpdate(c.id, { days, streak: s });
   }
   return (

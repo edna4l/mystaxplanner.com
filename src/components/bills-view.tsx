@@ -3,13 +3,13 @@
 // Ported from bills.jsx — dedicated Bills (finance) view with switchable
 // layouts (List/Calendar/Cards/Category), sort controls, a payoff
 // tracker, a 6-month spend trend, due-soon highlighting, and bulk
-// select/mark/delete. Undo-on-bulk-delete isn't ported yet (see repo
-// README's "Not yet ported").
+// select/mark/delete.
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
 import { parseISO, money } from "@/lib/date";
 import { SquareCard } from "@/components/square-card";
+import * as fx from "@/lib/fx";
 
 const BMON = [
   "January", "February", "March", "April", "May", "June",
@@ -84,7 +84,7 @@ function BillsRow({
       <button
         className={"paydot" + (b.paid ? " on" : "")}
         title={b.paid ? "Paid" : "Mark paid"}
-        onClick={() => onUpdate(b.id, { paid: !b.paid })}
+        onClick={(e) => { if (!b.paid) fx.coin(e.currentTarget); onUpdate(b.id, { paid: !b.paid }); }}
       />
       <span className="brow-name" onClick={() => onOpen(b)}>
         {b.cover?.kind === "emoji" ? <span className="brow-emoji">{b.cover.val}</span> : null}
@@ -231,7 +231,7 @@ function BillsCalendar({ vy, vm, bills, onUpdate, onOpen }: { vy: number; vm: nu
               {d != null ? <span className="bcal-date mono">{d}</span> : null}
               {items.map((b) => (
                 <div key={b.id} className={"bcal-bill" + (b.paid ? " paid" : "")} style={{ "--hue": typeMeta("bill").hue } as React.CSSProperties} title={b.title + " · " + money(b.amount)}>
-                  <button className={"bcal-dot" + (b.paid ? " on" : "")} title={b.paid ? "Paid" : "Mark paid"} onClick={() => onUpdate(b.id, { paid: !b.paid })} />
+                  <button className={"bcal-dot" + (b.paid ? " on" : "")} title={b.paid ? "Paid" : "Mark paid"} onClick={(e) => { if (!b.paid) fx.coin(e.currentTarget); onUpdate(b.id, { paid: !b.paid }); }} />
                   <span className="bcal-bill-name" onClick={() => onOpen(b)}>{b.title}</span>
                   <span className="bcal-bill-amt mono">{money(b.amount)}</span>
                 </div>

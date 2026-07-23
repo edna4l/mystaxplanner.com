@@ -92,6 +92,31 @@ export function useBoard() {
     return card as Card;
   }
 
+  // Re-inserts full card snapshots (one per slot each, so a card that was
+  // stacked with others comes back on its own — a deliberate simplification
+  // vs. the prototype's exact-snapshot undo). Backs the undo toast on
+  // deleteCard/bulkDeleteBills.
+  async function restoreCards(cards: Card[]) {
+    if (!userId || !cards.length) return;
+    const created: { slot: Slot; card: Card }[] = [];
+    for (const c of cards) {
+      const { data: slot } = await supabase.from("slots").insert({ user_id: userId, name: "" }).select().single();
+      if (!slot) continue;
+      const copyFields = { ...c } as Partial<Card>;
+      delete copyFields.id;
+      delete copyFields.created_at;
+      delete copyFields.updated_at;
+      delete copyFields.slot_id;
+      const { data: card } = await supabase
+        .from("cards")
+        .insert({ ...copyFields, user_id: userId, slot_id: slot.id, position_in_slot: 0 })
+        .select()
+        .single();
+      if (card) created.push({ slot, card: card as Card });
+    }
+    if (created.length) setBoard((b) => [...created.map((r) => ({ ...r.slot, cards: [r.card] })), ...b]);
+  }
+
   // --- custom card types -----------------------------------------------------
 
   async function createCustomType(label: string, hue: number) {
@@ -337,7 +362,7 @@ export function useBoard() {
 
   return {
     board, loading, userId, customTypes, reload, addCard, updateCard, deleteCard, merge, unstack, ungroup, renameSlot,
-    stampCard, extendBills, bulkDeleteBills, bulkMarkBills, applyCardOrder,
+    stampCard, extendBills, bulkDeleteBills, bulkMarkBills, applyCardOrder, restoreCards,
     createCustomType, updateCustomType, deleteCustomType,
   };
 }
