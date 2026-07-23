@@ -50,8 +50,11 @@ function pct(cl: Card["checklist"]) {
 }
 
 function SectionShell({
-  hue, title, sub, onAdd, addLabel, children,
-}: { hue: number; title: string; sub: string; onAdd: () => void; addLabel: string; children: React.ReactNode }) {
+  hue, title, sub, onAdd, addLabel, onDeleteType, onEditType, children,
+}: {
+  hue: number; title: string; sub: string; onAdd: () => void; addLabel: string;
+  onDeleteType?: (() => void) | null; onEditType?: (() => void) | null; children: React.ReactNode;
+}) {
   return (
     <div className="section" style={{ "--hue": hue } as React.CSSProperties}>
       <div className="section-head">
@@ -63,6 +66,8 @@ function SectionShell({
           </div>
         </div>
         <div className="section-actions">
+          {onEditType ? <button className="section-edit" onClick={onEditType}>Edit type</button> : null}
+          {onDeleteType ? <button className="section-del" onClick={onDeleteType}>Delete type</button> : null}
           <button className="add-btn" onClick={onAdd}>{addLabel}</button>
         </div>
       </div>
@@ -205,7 +210,7 @@ function GridBody({ cards, onOpen, onReorder }: { cards: Card[]; onOpen: (c: Car
 }
 
 export function SectionView({
-  cards, type, onUpdate, onOpen, onAdd, onReorder,
+  cards, type, onUpdate, onOpen, onAdd, onReorder, onDeleteType, onEditType,
 }: {
   cards: Card[];
   type: string;
@@ -213,6 +218,8 @@ export function SectionView({
   onOpen: (c: Card) => void;
   onAdd: (type: string) => void;
   onReorder: (ids: string[]) => void;
+  onDeleteType?: (() => void) | null;
+  onEditType?: (() => void) | null;
 }) {
   const T = typeMeta(type);
   const builtinSub: Record<string, string> = {
@@ -233,7 +240,11 @@ export function SectionView({
   else body = <GridBody cards={cards} onOpen={onOpen} onReorder={onReorder} />;
 
   return (
-    <SectionShell hue={T.hue} title={T.label} sub={sub} onAdd={() => onAdd(type)} addLabel={addLabel}>
+    <SectionShell
+      hue={T.hue} title={T.label} sub={sub} onAdd={() => onAdd(type)} addLabel={addLabel}
+      onDeleteType={T.custom ? onDeleteType : null}
+      onEditType={T.custom ? onEditType : null}
+    >
       {body}
     </SectionShell>
   );

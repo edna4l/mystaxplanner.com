@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { useBoard } from "@/lib/useBoard";
-import { BUILTIN_CARD_TYPES } from "@/lib/cardTypes";
 import type { BoardSlot, Card } from "@/lib/types";
 import { Topbar, type AppView } from "@/components/topbar";
 import { BoardView } from "@/components/board-view";
@@ -10,7 +9,7 @@ import { TodayView } from "@/components/today-view";
 import { CalendarView } from "@/components/calendar-view";
 import { BillsView } from "@/components/bills-view";
 import { SectionView } from "@/components/section-view";
-import { AddMenu } from "@/components/add-menu";
+import { AddMenu, EditTypeModal } from "@/components/add-menu";
 import { ExpandedCard } from "@/components/expanded-card";
 import { StackFan } from "@/components/stack-fan";
 import { DayFan } from "@/components/day-fan";
@@ -23,14 +22,16 @@ type Open =
 
 export default function HomeClient() {
   const {
-    board, loading, addCard, updateCard, deleteCard, merge, unstack, ungroup,
+    board, loading, customTypes, addCard, updateCard, deleteCard, merge, unstack, ungroup,
     stampCard, extendBills, bulkDeleteBills, bulkMarkBills, applyCardOrder,
+    createCustomType, updateCustomType, deleteCustomType,
   } = useBoard();
   const [view, setView] = useState<AppView>("today");
   const [sectionType, setSectionType] = useState<string | null>(null);
   const [open, setOpen] = useState<Open>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [pendingDate, setPendingDate] = useState<string | null>(null);
+  const [editTypeKey, setEditTypeKey] = useState<string | null>(null);
 
   const openCard = useMemo<Card | null>(() => {
     if (!open || open.kind !== "card") return null;
@@ -62,6 +63,11 @@ export default function HomeClient() {
     return out;
   }, [view, sectionType, board]);
 
+  const editingType = useMemo(
+    () => (editTypeKey ? customTypes.find((t) => t.key === editTypeKey) ?? null : null),
+    [editTypeKey, customTypes],
+  );
+
   const greeting = (() => {
     const h = new Date().getHours();
     return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
@@ -69,10 +75,25 @@ export default function HomeClient() {
   const dateStr = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 
   async function handleAdd(type: string) {
-    const card = await addCard(type, BUILTIN_CARD_TYPES, pendingDate ?? undefined);
+    const card = await addCard(type, pendingDate ?? undefined);
     setAddOpen(false);
     setPendingDate(null);
     if (card) setOpen({ kind: "card", cardId: card.id });
+  }
+
+  async function handleCreateType(name: string, hue: number) {
+    const key = await createCustomType(name, hue);
+    if (key) await handleAdd(key);
+  }
+
+  async function handleDeleteType(key: string) {
+    const def = customTypes.find((t) => t.key === key);
+    const n = board.reduce((a, s) => a + s.cards.filter((c) => c.type === key).length, 0);
+    const msg = `Delete the "${def?.label ?? ""}" type${n ? ` and its ${n} card${n === 1 ? "" : "s"}` : ""}? This can't be undone.`;
+    if (typeof window !== "undefined" && !window.confirm(msg)) return;
+    await deleteCustomType(key);
+    setView("board");
+    setSectionType(null);
   }
 
   if (loading) {
@@ -86,6 +107,7 @@ export default function HomeClient() {
         dateStr={dateStr}
         view={view}
         sectionType={sectionType}
+        customTypes={customTypes}
         onView={(v) => { setView(v); setSectionType(null); }}
         onSection={(type) => { setView("section"); setSectionType(type); }}
         onAdd={() => { setPendingDate(null); setAddOpen(true); }}
@@ -133,6 +155,8 @@ export default function HomeClient() {
           onOpen={(c) => setOpen({ kind: "card", cardId: c.id })}
           onAdd={handleAdd}
           onReorder={applyCardOrder}
+          onDeleteType={() => handleDeleteType(sectionType)}
+          onEditType={() => setEditTypeKey(sectionType)}
         />
       ) : null}
 
@@ -164,7 +188,22 @@ export default function HomeClient() {
         />
       ) : null}
 
-      {addOpen ? <AddMenu onPick={handleAdd} onClose={() => { setAddOpen(false); setPendingDate(null); }} /> : null}
+      {addOpen ? (
+        <AddMenu
+          customTypes={customTypes}
+          onPick={handleAdd}
+          onClose={() => { setAddOpen(false); setPendingDate(null); }}
+          onCreateType={handleCreateType}
+        />
+      ) : null}
+
+      {editingType ? (
+        <EditTypeModal
+          typeDef={editingType}
+          onClose={() => setEditTypeKey(null)}
+          onSave={(key, name, hue) => { updateCustomType(key, name, hue); setEditTypeKey(null); }}
+        />
+      ) : null}
     </div>
   );
 }

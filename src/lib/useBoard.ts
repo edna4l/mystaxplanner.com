@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { BoardSlot, Card, Slot, CardTypeDef } from "@/lib/types";
-import { newCardFields, defaultTitleFor } from "@/lib/cardTypes";
+import { newCardFields, defaultTitleFor, registerCardType, unregisterCardType } from "@/lib/cardTypes";
 import { parseISO, toISODate } from "@/lib/date";
 
 const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -31,6 +31,7 @@ export function useBoard() {
   const [board, setBoard] = useState<BoardSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [customTypes, setCustomTypes] = useState<CardTypeDef[]>([]);
 
   const reload = useCallback(async () => {
     const {
@@ -42,10 +43,16 @@ export function useBoard() {
       return;
     }
     setUserId(user.id);
-    const [{ data: slots }, { data: cards }] = await Promise.all([
+    const [{ data: slots }, { data: cards }, { data: types }] = await Promise.all([
       supabase.from("slots").select("*").order("sort_order", { ascending: true }),
       supabase.from("cards").select("*").order("position_in_slot", { ascending: true }),
+      supabase.from("card_types").select("*").order("created_at", { ascending: true }),
     ]);
+    const typeDefs: CardTypeDef[] = (types ?? []).map((t) => ({
+      key: t.key, label: t.label, hue: t.hue, blurb: t.blurb || "Custom", custom: true,
+    }));
+    typeDefs.forEach(registerCardType);
+    setCustomTypes(typeDefs);
     setBoard(groupIntoSlots(slots ?? [], (cards ?? []) as Card[]));
     setLoading(false);
   }, [supabase]);
@@ -56,7 +63,7 @@ export function useBoard() {
 
   // --- mutations -----------------------------------------------------------
 
-  async function addCard(type: string, customTypes: Record<string, CardTypeDef> = {}, date?: string) {
+  async function addCard(type: string, date?: string) {
     if (!userId) return null;
     const { data: slot, error: slotErr } = await supabase
       .from("slots")
@@ -73,7 +80,7 @@ export function useBoard() {
         user_id: userId,
         slot_id: slot.id,
         type,
-        title: defaultTitleFor(type, customTypes),
+        title: defaultTitleFor(type),
         position_in_slot: 0,
         ...fields,
       })
@@ -83,6 +90,37 @@ export function useBoard() {
 
     setBoard((b) => [{ ...slot, cards: [card as Card] }, ...b]);
     return card as Card;
+  }
+
+  // --- custom card types -----------------------------------------------------
+
+  async function createCustomType(label: string, hue: number) {
+    if (!userId) return null;
+    const key = "ctype_" + crypto.randomUUID().slice(0, 8);
+    const def: CardTypeDef = { key, label, hue, blurb: "Custom", custom: true };
+    const { error } = await supabase.from("card_types").insert({ user_id: userId, key, label, hue, blurb: "Custom" });
+    if (error) return null;
+    registerCardType(def);
+    setCustomTypes((p) => [...p, def]);
+    return key;
+  }
+
+  async function updateCustomType(key: string, label: string, hue: number) {
+    registerCardType({ key, label, hue, blurb: "Custom", custom: true });
+    setCustomTypes((p) => p.map((d) => (d.key === key ? { ...d, label, hue } : d)));
+    await supabase.from("card_types").update({ label, hue }).eq("key", key);
+  }
+
+  async function deleteCustomType(key: string) {
+    if (!userId) return;
+    const idSet = new Set(board.flatMap((s) => s.cards.filter((c) => c.type === key).map((c) => c.id)));
+    const emptiedSlotIds = board.filter((s) => s.cards.length && s.cards.every((c) => idSet.has(c.id))).map((s) => s.id);
+    setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.filter((c) => !idSet.has(c.id)) })).filter((s) => s.cards.length > 0));
+    unregisterCardType(key);
+    setCustomTypes((p) => p.filter((d) => d.key !== key));
+    if (idSet.size) await supabase.from("cards").delete().in("id", Array.from(idSet));
+    if (emptiedSlotIds.length) await supabase.from("slots").delete().in("id", emptiedSlotIds);
+    await supabase.from("card_types").delete().eq("key", key);
   }
 
   async function updateCard(cardId: string, patch: Partial<Card>) {
@@ -298,7 +336,8 @@ export function useBoard() {
   }
 
   return {
-    board, loading, userId, reload, addCard, updateCard, deleteCard, merge, unstack, ungroup, renameSlot,
+    board, loading, userId, customTypes, reload, addCard, updateCard, deleteCard, merge, unstack, ungroup, renameSlot,
     stampCard, extendBills, bulkDeleteBills, bulkMarkBills, applyCardOrder,
+    createCustomType, updateCustomType, deleteCustomType,
   };
 }

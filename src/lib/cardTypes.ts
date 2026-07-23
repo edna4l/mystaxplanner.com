@@ -1,6 +1,9 @@
 // Ported from data.jsx — the built-in type registry plus the "blank card"
-// factory. Custom types (created in-app) are merged in at runtime by
-// useBoard() once they're loaded from Supabase's card_types table.
+// factory. Mirrors the prototype's window.CARD_TYPES pattern: CARD_TYPES
+// starts as the 5 builtins and custom types get merged in at runtime (by
+// useBoard, once loaded from Supabase's card_types table) via
+// registerCardType(). Everything just reads typeMeta(type) — no need to
+// thread a customTypes prop through every component.
 import type { Card, CardTypeDef } from "./types";
 
 export const BUILTIN_CARD_TYPES: Record<string, CardTypeDef> = {
@@ -11,11 +14,18 @@ export const BUILTIN_CARD_TYPES: Record<string, CardTypeDef> = {
   note: { key: "note", label: "Note", hue: 22, blurb: "A thought to keep" },
 };
 
-export function typeMeta(
-  type: string,
-  customTypes: Record<string, CardTypeDef> = {},
-): CardTypeDef {
-  return BUILTIN_CARD_TYPES[type] ?? customTypes[type] ?? BUILTIN_CARD_TYPES.note;
+export const CARD_TYPES: Record<string, CardTypeDef> = { ...BUILTIN_CARD_TYPES };
+
+export function registerCardType(def: CardTypeDef) {
+  CARD_TYPES[def.key] = def;
+}
+
+export function unregisterCardType(key: string) {
+  delete CARD_TYPES[key];
+}
+
+export function typeMeta(type: string): CardTypeDef {
+  return CARD_TYPES[type] ?? CARD_TYPES.note;
 }
 
 // Column defaults per type — matches base{} in data.jsx's newCard(). Only
@@ -55,7 +65,6 @@ export function newCardFields(type: string): NewCardFields {
   }
 }
 
-export function defaultTitleFor(type: string, customTypes: Record<string, CardTypeDef> = {}) {
-  const label = typeMeta(type, customTypes).label ?? "Card";
-  return "Untitled " + label;
+export function defaultTitleFor(type: string) {
+  return "Untitled " + (typeMeta(type).label || "Card");
 }

@@ -1,18 +1,16 @@
 "use client";
 
 import { BUILTIN_CARD_TYPES } from "@/lib/cardTypes";
+import type { CardTypeDef } from "@/lib/types";
 
 export type AppView = "today" | "board" | "calendar" | "bills" | "section";
-
-// Types with their own dedicated tab (Bills) are excluded from the
-// section-chip row — clicking them would just duplicate the Bills tab.
-const SECTION_TYPES = Object.values(BUILTIN_CARD_TYPES).filter((t) => t.key !== "bill");
 
 export function Topbar({
   greeting,
   dateStr,
   view,
   sectionType,
+  customTypes,
   onView,
   onSection,
   onAdd,
@@ -21,10 +19,14 @@ export function Topbar({
   dateStr: string;
   view: AppView;
   sectionType: string | null;
+  customTypes: CardTypeDef[];
   onView: (v: AppView) => void;
   onSection: (type: string) => void;
   onAdd: () => void;
 }) {
+  // Types with their own dedicated tab (Bills) are excluded from the
+  // section-chip row — clicking them would just duplicate the Bills tab.
+  const sectionTypes = [...Object.values(BUILTIN_CARD_TYPES).filter((t) => t.key !== "bill"), ...customTypes];
   return (
     <>
       <header className="topbar">
@@ -51,7 +53,7 @@ export function Topbar({
           <button className={"vt" + (view === "bills" ? " on" : "")} onClick={() => onView("bills")}>Bills</button>
         </div>
         <span className="vt-divider" />
-        {SECTION_TYPES.map((t) => (
+        {sectionTypes.map((t) => (
           <button
             key={t.key}
             className={"filter-chip chip-section" + (view === "section" && sectionType === t.key ? " active" : "")}
