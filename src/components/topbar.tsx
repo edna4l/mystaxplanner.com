@@ -1,6 +1,6 @@
 "use client";
 
-export type AppView = "today" | "board" | "calendar";
+export type AppView = "today" | "board" | "calendar" | "bills";
 
 export function Topbar({
   greeting,
@@ -38,6 +38,7 @@ export function Topbar({
           <button className={"vt" + (view === "today" ? " on" : "")} onClick={() => onView("today")}>Today</button>
           <button className={"vt" + (view === "board" ? " on" : "")} onClick={() => onView("board")}>Board</button>
           <button className={"vt" + (view === "calendar" ? " on" : "")} onClick={() => onView("calendar")}>Calendar</button>
+          <button className={"vt" + (view === "bills" ? " on" : "")} onClick={() => onView("bills")}>Bills</button>
         </div>
       </div>
     </>

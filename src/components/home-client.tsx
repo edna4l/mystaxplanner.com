@@ -8,6 +8,7 @@ import { Topbar, type AppView } from "@/components/topbar";
 import { BoardView } from "@/components/board-view";
 import { TodayView } from "@/components/today-view";
 import { CalendarView } from "@/components/calendar-view";
+import { BillsView } from "@/components/bills-view";
 import { AddMenu } from "@/components/add-menu";
 import { ExpandedCard } from "@/components/expanded-card";
 import { StackFan } from "@/components/stack-fan";
@@ -20,7 +21,7 @@ type Open =
   | null;
 
 export default function HomeClient() {
-  const { board, loading, addCard, updateCard, deleteCard, merge, unstack, ungroup, stampCard } = useBoard();
+  const { board, loading, addCard, updateCard, deleteCard, merge, unstack, ungroup, stampCard, extendBills, bulkDeleteBills, bulkMarkBills } = useBoard();
   const [view, setView] = useState<AppView>("today");
   const [open, setOpen] = useState<Open>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -84,7 +85,7 @@ export default function HomeClient() {
           onOpenStack={(s) => setOpen({ kind: "fan", slotId: s.id })}
           onMerge={merge}
         />
-      ) : (
+      ) : view === "calendar" ? (
         <CalendarView
           board={board}
           onOpenCard={(c) => setOpen({ kind: "card", cardId: c.id })}
@@ -93,6 +94,16 @@ export default function HomeClient() {
           onStamp={stampCard}
           onAddOnDate={(date) => { setPendingDate(date); setAddOpen(true); }}
           onAddReusable={() => { setPendingDate(null); setAddOpen(true); }}
+        />
+      ) : (
+        <BillsView
+          board={board}
+          onUpdate={updateCard}
+          onOpen={(c) => setOpen({ kind: "card", cardId: c.id })}
+          onAddBill={() => handleAdd("bill")}
+          onExtend={extendBills}
+          onBulkDelete={bulkDeleteBills}
+          onBulkMark={bulkMarkBills}
         />
       )}
 

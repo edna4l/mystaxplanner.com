@@ -9,6 +9,9 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { BoardSlot, Card, Slot, CardTypeDef } from "@/lib/types";
 import { newCardFields, defaultTitleFor } from "@/lib/cardTypes";
+import { parseISO, toISODate } from "@/lib/date";
+
+const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function groupIntoSlots(slots: Slot[], cards: Card[]): BoardSlot[] {
   const bySlot = new Map<string, Card[]>();
@@ -223,5 +226,69 @@ export function useBoard() {
     setBoard((b) => [{ ...slot, cards: [copy as Card] }, ...b]);
   }
 
-  return { board, loading, userId, reload, addCard, updateCard, deleteCard, merge, unstack, ungroup, renameSlot, stampCard };
+  // Copy each recurring bill dated in the source month into targetY/targetM,
+  // skipping any series (origin) that already has a copy there; shifts the
+  // day-of-month, clamped to the target month's day count. Mirrors app.jsx's
+  // extendBills(), used both by the manual "Extend forward/back" buttons and
+  // BillsView's auto-carry-forward into empty months.
+  async function extendBills(cardsToExtend: Card[], targetY: number, targetM: number) {
+    if (!userId || !cardsToExtend.length) return;
+    const existing = new Set<string>();
+    board.forEach((s) => s.cards.forEach((c) => {
+      if (c.type !== "bill" || !c.date) return;
+      const p = parseISO(c.date);
+      if (p && p.y === targetY && p.m === targetM) existing.add(c.origin || c.id);
+    }));
+    const daysInTarget = new Date(targetY, targetM + 1, 0).getDate();
+    const toCreate = cardsToExtend.filter((c) => !existing.has(c.origin || c.id));
+    if (!toCreate.length) return;
+
+    const created: { slot: Slot; card: Card }[] = [];
+    for (const c of toCreate) {
+      const root = c.origin || c.id;
+      const p = parseISO(c.date);
+      let date: string | null = null;
+      let due = c.due || "";
+      if (p) {
+        const day = Math.min(p.d, daysInTarget);
+        date = toISODate(targetY, targetM, day);
+        due = MON3[targetM] + " " + day;
+      }
+      const { data: slot } = await supabase.from("slots").insert({ user_id: userId, name: "" }).select().single();
+      if (!slot) continue;
+      const copyFields = { ...c } as Partial<Card>;
+      delete copyFields.id;
+      delete copyFields.created_at;
+      delete copyFields.updated_at;
+      delete copyFields.slot_id;
+      const { data: card } = await supabase
+        .from("cards")
+        .insert({ ...copyFields, user_id: userId, slot_id: slot.id, date, due, paid: false, origin: root, position_in_slot: 0 })
+        .select()
+        .single();
+      if (card) created.push({ slot, card: card as Card });
+    }
+    if (created.length) setBoard((b) => [...created.map((r) => ({ ...r.slot, cards: [r.card] })), ...b]);
+  }
+
+  async function bulkDeleteBills(ids: string[]) {
+    if (!ids.length) return;
+    const idSet = new Set(ids);
+    const emptiedSlotIds = board.filter((s) => s.cards.every((c) => idSet.has(c.id))).map((s) => s.id);
+    setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.filter((c) => !idSet.has(c.id)) })).filter((s) => s.cards.length > 0));
+    await supabase.from("cards").delete().in("id", ids);
+    if (emptiedSlotIds.length) await supabase.from("slots").delete().in("id", emptiedSlotIds);
+  }
+
+  async function bulkMarkBills(ids: string[], paid: boolean) {
+    if (!ids.length) return;
+    const idSet = new Set(ids);
+    setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (idSet.has(c.id) ? { ...c, paid } : c)) })));
+    await supabase.from("cards").update({ paid }).in("id", ids);
+  }
+
+  return {
+    board, loading, userId, reload, addCard, updateCard, deleteCard, merge, unstack, ungroup, renameSlot,
+    stampCard, extendBills, bulkDeleteBills, bulkMarkBills,
+  };
 }
