@@ -68,7 +68,7 @@ export interface Profile {
   name: string;
   avatar: Cover | null;
   accent: number | null;
-  tweaks: Record<string, unknown>;
+  tweaks: import("./theme").Tweaks;
   preset_id: string | null;
   bills_layout: string;
   onboarded: boolean;

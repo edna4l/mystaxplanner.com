@@ -1,7 +1,8 @@
 "use client";
 
 import { BUILTIN_CARD_TYPES } from "@/lib/cardTypes";
-import type { CardTypeDef } from "@/lib/types";
+import type { CardTypeDef, Profile } from "@/lib/types";
+import { Avatar } from "@/components/avatar";
 
 export type AppView = "today" | "board" | "calendar" | "bills" | "section";
 
@@ -11,22 +12,30 @@ export function Topbar({
   view,
   sectionType,
   customTypes,
+  profile,
+  dark,
   onView,
   onSection,
   onAdd,
   onQuickAdd,
   onSearch,
+  onToggleDark,
+  onOpenSettings,
 }: {
   greeting: string;
   dateStr: string;
   view: AppView;
   sectionType: string | null;
   customTypes: CardTypeDef[];
+  profile: Profile | null;
+  dark: boolean;
   onView: (v: AppView) => void;
   onSection: (type: string) => void;
   onAdd: () => void;
   onQuickAdd: () => void;
   onSearch: () => void;
+  onToggleDark: () => void;
+  onOpenSettings: () => void;
 }) {
   // Types with their own dedicated tab (Bills) are excluded from the
   // section-chip row — clicking them would just duplicate the Bills tab.
@@ -47,6 +56,10 @@ export function Topbar({
           <button className="quick-add-btn" onClick={onQuickAdd} title="Quick add (press /)">
             <span className="qa-plus">+</span><span className="qa-label">Quick add</span><span className="qa-key mono">/</span>
           </button>
+          <button className="icon-toggle" title={dark ? "Switch to light" : "Switch to dark"} onClick={onToggleDark}>
+            {dark ? "☀" : "☾"}
+          </button>
+          <Avatar profile={profile} size={38} onClick={onOpenSettings} />
           <button className="add-btn" onClick={onAdd}>+ New card</button>
           <form action="/auth/signout" method="post">
             <button className="icon-toggle" type="submit" title="Sign out">⏻</button>

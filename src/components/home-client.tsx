@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useBoard } from "@/lib/useBoard";
-import type { BoardSlot, Card } from "@/lib/types";
+import { useProfile } from "@/lib/useProfile";
+import type { BoardSlot, Card, Profile } from "@/lib/types";
 import type { ParsedQuickAdd } from "@/lib/quickAdd";
+import { applyTheme, applyBrand } from "@/lib/theme";
 import { Topbar, type AppView } from "@/components/topbar";
 import { BoardView } from "@/components/board-view";
 import { TodayView } from "@/components/today-view";
@@ -16,6 +18,8 @@ import { StackFan } from "@/components/stack-fan";
 import { DayFan } from "@/components/day-fan";
 import { QuickAdd } from "@/components/quick-add";
 import { SearchModal } from "@/components/search-modal";
+import { Onboarding } from "@/components/onboarding";
+import { SettingsModal } from "@/components/settings-modal";
 
 type Open =
   | { kind: "card"; cardId: string }
@@ -29,6 +33,7 @@ export default function HomeClient() {
     stampCard, extendBills, bulkDeleteBills, bulkMarkBills, applyCardOrder,
     createCustomType, updateCustomType, deleteCustomType,
   } = useBoard();
+  const { profile, loading: profileLoading, updateProfile, updateTweaks } = useProfile();
   const [view, setView] = useState<AppView>("today");
   const [sectionType, setSectionType] = useState<string | null>(null);
   const [open, setOpen] = useState<Open>(null);
@@ -37,6 +42,15 @@ export default function HomeClient() {
   const [editTypeKey, setEditTypeKey] = useState<string | null>(null);
   const [quickOpen, setQuickOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    if (profile) applyTheme(profile.tweaks);
+  }, [profile]);
+
+  useEffect(() => {
+    if (profile) applyBrand(profile.accent, profile.tweaks.appearance === "Dark");
+  }, [profile]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -130,9 +144,11 @@ export default function HomeClient() {
     setSectionType(null);
   }
 
-  if (loading) {
+  if (loading || profileLoading) {
     return <div className="app"><div className="today-empty" style={{ padding: 40, textAlign: "center" }}>Loading your board…</div></div>;
   }
+
+  const dark = profile ? profile.tweaks.appearance === "Dark" : false;
 
   return (
     <div className="app">
@@ -142,11 +158,15 @@ export default function HomeClient() {
         view={view}
         sectionType={sectionType}
         customTypes={customTypes}
+        profile={profile}
+        dark={dark}
         onView={(v) => { setView(v); setSectionType(null); }}
         onSection={(type) => { setView("section"); setSectionType(type); }}
         onAdd={() => { setPendingDate(null); setAddOpen(true); }}
         onQuickAdd={() => setQuickOpen(true)}
         onSearch={() => setSearchOpen(true)}
+        onToggleDark={() => updateTweaks({ appearance: dark ? "Light" : "Dark" })}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
 
       {view === "today" ? (
@@ -244,6 +264,19 @@ export default function HomeClient() {
       {quickOpen ? <QuickAdd onClose={() => setQuickOpen(false)} onSubmit={handleCreateFromQuick} /> : null}
       {searchOpen ? (
         <SearchModal board={board} onOpen={(c) => setOpen({ kind: "card", cardId: c.id })} onClose={() => setSearchOpen(false)} />
+      ) : null}
+
+      {profile && !profile.onboarded ? (
+        <Onboarding profile={profile} onSaveTweaks={updateTweaks} onDone={(patch: Partial<Profile>) => updateProfile(patch)} />
+      ) : null}
+
+      {settingsOpen && profile ? (
+        <SettingsModal
+          profile={profile}
+          onClose={() => setSettingsOpen(false)}
+          onSaveProfile={updateProfile}
+          onSaveTweaks={updateTweaks}
+        />
       ) : null}
     </div>
   );
