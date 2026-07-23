@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useBoard } from "@/lib/useBoard";
 import type { BoardSlot, Card } from "@/lib/types";
+import type { ParsedQuickAdd } from "@/lib/quickAdd";
 import { Topbar, type AppView } from "@/components/topbar";
 import { BoardView } from "@/components/board-view";
 import { TodayView } from "@/components/today-view";
@@ -13,6 +14,8 @@ import { AddMenu, EditTypeModal } from "@/components/add-menu";
 import { ExpandedCard } from "@/components/expanded-card";
 import { StackFan } from "@/components/stack-fan";
 import { DayFan } from "@/components/day-fan";
+import { QuickAdd } from "@/components/quick-add";
+import { SearchModal } from "@/components/search-modal";
 
 type Open =
   | { kind: "card"; cardId: string }
@@ -32,6 +35,21 @@ export default function HomeClient() {
   const [addOpen, setAddOpen] = useState(false);
   const [pendingDate, setPendingDate] = useState<string | null>(null);
   const [editTypeKey, setEditTypeKey] = useState<string | null>(null);
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "/" && !quickOpen) {
+        const el = document.activeElement as HTMLElement | null;
+        const typing = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+        if (!typing) { e.preventDefault(); setQuickOpen(true); }
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setSearchOpen(true); }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [quickOpen]);
 
   const openCard = useMemo<Card | null>(() => {
     if (!open || open.kind !== "card") return null;
@@ -86,6 +104,22 @@ export default function HomeClient() {
     if (key) await handleAdd(key);
   }
 
+  async function handleCreateFromQuick(parsed: ParsedQuickAdd) {
+    setQuickOpen(false);
+    const type = parsed.typeKey;
+    const card = await addCard(type, parsed.date || undefined);
+    if (!card) return;
+    const patch: Partial<Card> = { title: parsed.title };
+    if (type === "bill") {
+      if (parsed.amount != null) patch.amount = parsed.amount;
+      if (parsed.dueLabel) patch.due = parsed.dueLabel;
+    } else if (parsed.dueLabel && (type === "task" || type === "project")) {
+      patch.due = parsed.dueLabel;
+    }
+    if (parsed.cadence) patch.cadence = parsed.cadence;
+    await updateCard(card.id, patch);
+  }
+
   async function handleDeleteType(key: string) {
     const def = customTypes.find((t) => t.key === key);
     const n = board.reduce((a, s) => a + s.cards.filter((c) => c.type === key).length, 0);
@@ -111,6 +145,8 @@ export default function HomeClient() {
         onView={(v) => { setView(v); setSectionType(null); }}
         onSection={(type) => { setView("section"); setSectionType(type); }}
         onAdd={() => { setPendingDate(null); setAddOpen(true); }}
+        onQuickAdd={() => setQuickOpen(true)}
+        onSearch={() => setSearchOpen(true)}
       />
 
       {view === "today" ? (
@@ -203,6 +239,11 @@ export default function HomeClient() {
           onClose={() => setEditTypeKey(null)}
           onSave={(key, name, hue) => { updateCustomType(key, name, hue); setEditTypeKey(null); }}
         />
+      ) : null}
+
+      {quickOpen ? <QuickAdd onClose={() => setQuickOpen(false)} onSubmit={handleCreateFromQuick} /> : null}
+      {searchOpen ? (
+        <SearchModal board={board} onOpen={(c) => setOpen({ kind: "card", cardId: c.id })} onClose={() => setSearchOpen(false)} />
       ) : null}
     </div>
   );

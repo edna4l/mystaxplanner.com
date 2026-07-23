@@ -1,11 +1,12 @@
 "use client";
 
 // Trimmed port of overlays.jsx's ExpandedCard + card.jsx's ExpandedBody.
-// Covers title + the per-type body editor; cover picker, type-switching,
+// Covers title, cover picker, and the per-type body editor; type-switching
 // and the recurrence/auto-fill Schedule section aren't ported yet.
 import { useState } from "react";
 import type { Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
+import { CoverPicker } from "@/components/cover-picker";
 
 function pct(checklist: Card["checklist"]) {
   if (!checklist || !checklist.length) return 0;
@@ -182,6 +183,7 @@ export function ExpandedCard({
           onChange={(e) => onUpdate({ title: e.target.value })}
           placeholder="Untitled"
         />
+        <CoverPicker card={card} onUpdate={onUpdate} />
         <ExpandedBody card={card} onUpdate={onUpdate} />
       </div>
     </div>

@@ -14,6 +14,8 @@ export function Topbar({
   onView,
   onSection,
   onAdd,
+  onQuickAdd,
+  onSearch,
 }: {
   greeting: string;
   dateStr: string;
@@ -23,6 +25,8 @@ export function Topbar({
   onView: (v: AppView) => void;
   onSection: (type: string) => void;
   onAdd: () => void;
+  onQuickAdd: () => void;
+  onSearch: () => void;
 }) {
   // Types with their own dedicated tab (Bills) are excluded from the
   // section-chip row — clicking them would just duplicate the Bills tab.
@@ -39,6 +43,10 @@ export function Topbar({
           <span className="date mono">{dateStr}</span>
         </div>
         <div className="head-right">
+          <button className="icon-toggle" title="Search (Ctrl/Cmd+K)" onClick={onSearch}>⌕</button>
+          <button className="quick-add-btn" onClick={onQuickAdd} title="Quick add (press /)">
+            <span className="qa-plus">+</span><span className="qa-label">Quick add</span><span className="qa-key mono">/</span>
+          </button>
           <button className="add-btn" onClick={onAdd}>+ New card</button>
           <form action="/auth/signout" method="post">
             <button className="icon-toggle" type="submit" title="Sign out">⏻</button>
