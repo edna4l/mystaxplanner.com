@@ -194,5 +194,34 @@ export function useBoard() {
     await supabase.from("slots").update({ name }).eq("id", slotId);
   }
 
-  return { board, loading, userId, reload, addCard, updateCard, deleteCard, merge, unstack, ungroup, renameSlot };
+  // Stamp a dated COPY of a reusable (undated) card onto a calendar day —
+  // the original stays in the tray so it can be reused across many days.
+  // Mirrors app.jsx's stampCard().
+  async function stampCard(cardId: string, date: string) {
+    if (!userId) return;
+    let master: Card | null = null;
+    board.forEach((s) => s.cards.forEach((c) => { if (c.id === cardId) master = c; }));
+    if (!master) return;
+    const m = master as Card;
+
+    const { data: slot } = await supabase.from("slots").insert({ user_id: userId, name: "" }).select().single();
+    if (!slot) return;
+
+    const copyFields = { ...m } as Partial<Card>;
+    delete copyFields.id;
+    delete copyFields.created_at;
+    delete copyFields.updated_at;
+    delete copyFields.slot_id;
+
+    const { data: copy } = await supabase
+      .from("cards")
+      .insert({ ...copyFields, user_id: userId, slot_id: slot.id, date, origin: m.origin || m.id, position_in_slot: 0 })
+      .select()
+      .single();
+    if (!copy) return;
+
+    setBoard((b) => [{ ...slot, cards: [copy as Card] }, ...b]);
+  }
+
+  return { board, loading, userId, reload, addCard, updateCard, deleteCard, merge, unstack, ungroup, renameSlot, stampCard };
 }

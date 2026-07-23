@@ -25,3 +25,14 @@ export function money(n: number | null | undefined) {
   const v = Number(n || 0);
   return "$" + v.toLocaleString(undefined, { minimumFractionDigits: v % 1 ? 2 : 0, maximumFractionDigits: 2 });
 }
+
+export function parseISO(iso: string | null | undefined) {
+  if (!iso || typeof iso !== "string") return null;
+  const p = iso.split("-").map(Number);
+  if (p.length !== 3 || p.some(isNaN)) return null;
+  return { y: p[0], m: p[1] - 1, d: p[2] };
+}
+
+export function toISODate(y: number, m: number, d: number) {
+  return y + "-" + pad2(m + 1) + "-" + pad2(d);
+}

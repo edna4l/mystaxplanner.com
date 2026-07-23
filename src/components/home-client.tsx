@@ -4,20 +4,27 @@ import { useMemo, useState } from "react";
 import { useBoard } from "@/lib/useBoard";
 import { BUILTIN_CARD_TYPES } from "@/lib/cardTypes";
 import type { BoardSlot, Card } from "@/lib/types";
-import { Topbar } from "@/components/topbar";
+import { Topbar, type AppView } from "@/components/topbar";
 import { BoardView } from "@/components/board-view";
 import { TodayView } from "@/components/today-view";
+import { CalendarView } from "@/components/calendar-view";
 import { AddMenu } from "@/components/add-menu";
 import { ExpandedCard } from "@/components/expanded-card";
 import { StackFan } from "@/components/stack-fan";
+import { DayFan } from "@/components/day-fan";
 
-type Open = { kind: "card"; cardId: string } | { kind: "fan"; slotId: string } | null;
+type Open =
+  | { kind: "card"; cardId: string }
+  | { kind: "fan"; slotId: string }
+  | { kind: "dayfan"; label: string; cardIds: string[] }
+  | null;
 
 export default function HomeClient() {
-  const { board, loading, addCard, updateCard, deleteCard, merge, unstack, ungroup } = useBoard();
-  const [view, setView] = useState<"today" | "board">("today");
+  const { board, loading, addCard, updateCard, deleteCard, merge, unstack, ungroup, stampCard } = useBoard();
+  const [view, setView] = useState<AppView>("today");
   const [open, setOpen] = useState<Open>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
 
   const openCard = useMemo<Card | null>(() => {
     if (!open || open.kind !== "card") return null;
@@ -33,6 +40,15 @@ export default function HomeClient() {
     return board.find((s) => s.id === open.slotId) ?? null;
   }, [open, board]);
 
+  const dayFan = useMemo(() => {
+    if (!open || open.kind !== "dayfan") return null;
+    const cards: Card[] = [];
+    board.forEach((s) => s.cards.forEach((c) => { if (open.cardIds.includes(c.id)) cards.push(c); }));
+    if (!cards.length) return null;
+    cards.sort((a, b) => (a.card_order == null ? 9999 : a.card_order) - (b.card_order == null ? 9999 : b.card_order));
+    return { label: open.label, cards };
+  }, [open, board]);
+
   const greeting = (() => {
     const h = new Date().getHours();
     return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
@@ -40,8 +56,9 @@ export default function HomeClient() {
   const dateStr = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 
   async function handleAdd(type: string) {
-    const card = await addCard(type, BUILTIN_CARD_TYPES);
+    const card = await addCard(type, BUILTIN_CARD_TYPES, pendingDate ?? undefined);
     setAddOpen(false);
+    setPendingDate(null);
     if (card) setOpen({ kind: "card", cardId: card.id });
   }
 
@@ -51,7 +68,7 @@ export default function HomeClient() {
 
   return (
     <div className="app">
-      <Topbar greeting={greeting} dateStr={dateStr} view={view} onView={setView} onAdd={() => setAddOpen(true)} />
+      <Topbar greeting={greeting} dateStr={dateStr} view={view} onView={setView} onAdd={() => { setPendingDate(null); setAddOpen(true); }} />
 
       {view === "today" ? (
         <TodayView
@@ -60,12 +77,22 @@ export default function HomeClient() {
           onUpdate={updateCard}
           onGo={() => setView("board")}
         />
-      ) : (
+      ) : view === "board" ? (
         <BoardView
           board={board}
           onOpenCard={(c) => setOpen({ kind: "card", cardId: c.id })}
           onOpenStack={(s) => setOpen({ kind: "fan", slotId: s.id })}
           onMerge={merge}
+        />
+      ) : (
+        <CalendarView
+          board={board}
+          onOpenCard={(c) => setOpen({ kind: "card", cardId: c.id })}
+          onOpenDay={(label, cards) => setOpen({ kind: "dayfan", label, cardIds: cards.map((c) => c.id) })}
+          onSetDate={(cardId, date) => updateCard(cardId, { date })}
+          onStamp={stampCard}
+          onAddOnDate={(date) => { setPendingDate(date); setAddOpen(true); }}
+          onAddReusable={() => { setPendingDate(null); setAddOpen(true); }}
         />
       )}
 
@@ -88,7 +115,16 @@ export default function HomeClient() {
         />
       ) : null}
 
-      {addOpen ? <AddMenu onPick={handleAdd} onClose={() => setAddOpen(false)} /> : null}
+      {dayFan ? (
+        <DayFan
+          title={dayFan.label}
+          cards={dayFan.cards}
+          onClose={() => setOpen(null)}
+          onOpenCard={(c) => setOpen({ kind: "card", cardId: c.id })}
+        />
+      ) : null}
+
+      {addOpen ? <AddMenu onPick={handleAdd} onClose={() => { setAddOpen(false); setPendingDate(null); }} /> : null}
     </div>
   );
 }

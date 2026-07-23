@@ -1,5 +1,7 @@
 "use client";
 
+export type AppView = "today" | "board" | "calendar";
+
 export function Topbar({
   greeting,
   dateStr,
@@ -9,8 +11,8 @@ export function Topbar({
 }: {
   greeting: string;
   dateStr: string;
-  view: "today" | "board";
-  onView: (v: "today" | "board") => void;
+  view: AppView;
+  onView: (v: AppView) => void;
   onAdd: () => void;
 }) {
   return (
@@ -35,6 +37,7 @@ export function Topbar({
         <div className="view-toggle">
           <button className={"vt" + (view === "today" ? " on" : "")} onClick={() => onView("today")}>Today</button>
           <button className={"vt" + (view === "board" ? " on" : "")} onClick={() => onView("board")}>Board</button>
+          <button className={"vt" + (view === "calendar" ? " on" : "")} onClick={() => onView("calendar")}>Calendar</button>
         </div>
       </div>
     </>
