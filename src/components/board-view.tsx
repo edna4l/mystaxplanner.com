@@ -18,7 +18,7 @@ import { summarizeBillsForBoard } from "@/lib/billBoardStack";
 import { CustomGroupStackTile } from "@/components/custom-group-tile";
 import { groupCustomTypesForBoard } from "@/lib/customStack";
 import { computeTodaySummary } from "@/lib/todaySummary";
-import { soonestDate } from "@/lib/date";
+import { soonestDate, todayISO } from "@/lib/date";
 import { TodayGlance } from "@/components/today-glance";
 import { NeedsAttention } from "@/components/needs-attention";
 import { SmartSuggestionBanner } from "@/components/smart-suggestion-banner";
@@ -26,7 +26,7 @@ import { detectStackSuggestions } from "@/lib/smartSuggestions";
 
 type SortKey = "date" | "amount" | "amount-asc" | "name" | "name-desc" | "category";
 type BoardMode = Tweaks["boardView"];
-const BOARD_MODES: BoardMode[] = ["Stacks", "Cards", "Timeline"];
+const BOARD_MODES: BoardMode[] = ["Stacks", "Cards", "Timeline", "Now/Next/Later"];
 
 interface SortableTile {
   key: string;
@@ -35,6 +35,12 @@ interface SortableTile {
   date: string | null;
   amount: number | null;
   category: string | null;
+  // Only set for single-card tiles — lets Now/Next/Later special-case
+  // habits (whose .date is normally unset) against todaySummary's
+  // habitsRisk list instead of bucketing them by date like everything
+  // else.
+  type?: string;
+  cardId?: string;
 }
 
 function cmpBy(key: SortKey): (a: SortableTile, b: SortableTile) => number {
@@ -190,6 +196,8 @@ export function BoardView({
       date: card.date,
       amount: card.type === "bill" ? card.amount : null,
       category: card.category,
+      type: card.type,
+      cardId: card.id,
       node: slotTile(s, card.type === "project" && (card.checklist?.length ?? 0) > 0),
     };
     if (card.type === "habit" || card.type === "project") stackSlots.push(tile);
@@ -244,6 +252,31 @@ export function BoardView({
       .map(([key, tiles]) => ({ key, label: monthLabel(key), tiles: tiles.sort(cmpBy("date")) }));
   }
 
+  // Now/Next/Later: same grouped tiles as Stacks/Timeline, bucketed by
+  // urgency instead of category or month. A habit's own .date is
+  // normally unset (it's tracked via a rolling completion window, not a
+  // due date), so habits are special-cased against todaySummary's
+  // habitsRisk instead — not done today lands in Now, already done
+  // today is omitted entirely (nothing left to act on).
+  const nowTiles: SortableTile[] = [];
+  const nextTiles: SortableTile[] = [];
+  const laterTiles: SortableTile[] = [];
+  if (boardView === "Now/Next/Later") {
+    const today = todayISO(0);
+    const weekEnd = todayISO(7);
+    const riskyHabitIds = new Set(todaySummary.habitsRisk.map((c) => c.id));
+    [...stackSlots, ...noteSlots].forEach((t) => {
+      if (t.type === "habit") {
+        if (t.cardId && riskyHabitIds.has(t.cardId)) nowTiles.push(t);
+        return;
+      }
+      if (!t.date) { laterTiles.push(t); return; }
+      if (t.date <= today) nowTiles.push(t);
+      else if (t.date <= weekEnd) nextTiles.push(t);
+      else laterTiles.push(t);
+    });
+  }
+
   const hasAnyTiles = boardView === "Cards" ? sortedFlat.length > 0 : stackSlots.length > 0 || noteSlots.length > 0;
 
   return (
@@ -259,7 +292,7 @@ export function BoardView({
             </button>
           ))}
         </div>
-        {hasAnyTiles && boardView !== "Timeline" ? (
+        {hasAnyTiles && boardView !== "Timeline" && boardView !== "Now/Next/Later" ? (
           <select className="bsort" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} title="Sort board">
             <option value="date">Sort: Date</option>
             <option value="amount">Sort: Amount (high→low)</option>
@@ -285,6 +318,23 @@ export function BoardView({
               <main className="board">{g.tiles.map((t) => t.node)}</main>
             </div>
           ))
+        ) : (
+          <div className="section-empty">No cards yet.</div>
+        )
+      ) : boardView === "Now/Next/Later" ? (
+        nowTiles.length || nextTiles.length || laterTiles.length ? (
+          [
+            { key: "now", label: "Now", tiles: nowTiles },
+            { key: "next", label: "Next", tiles: nextTiles },
+            { key: "later", label: "Later", tiles: laterTiles },
+          ].map((g) =>
+            g.tiles.length ? (
+              <div key={g.key}>
+                <span className="section-label board-section-label">{g.label}</span>
+                <main className="board">{[...g.tiles].sort(cmpBy("date")).map((t) => t.node)}</main>
+              </div>
+            ) : null,
+          )
         ) : (
           <div className="section-empty">No cards yet.</div>
         )
