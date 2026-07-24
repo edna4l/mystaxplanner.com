@@ -603,6 +603,15 @@ input, textarea { font-family: inherit; }
 .glance-link { cursor: pointer; color: var(--accent-ink, var(--ink)); }
 .glance-link:hover { border-color: color-mix(in oklab, var(--ink) 24%, var(--line)); }
 .needs-attention { padding: 14px clamp(20px, 5vw, 64px) 2px; display: flex; flex-direction: column; gap: 8px; }
+.suggestions { padding: 10px clamp(20px, 5vw, 64px) 2px; display: flex; flex-direction: column; gap: 8px; }
+.suggestion-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  background: color-mix(in oklab, var(--accent, var(--ink)) 8%, var(--panel)); border: 1px solid var(--line);
+  border-radius: 14px; padding: 10px 14px;
+}
+.suggestion-text { font-size: 13px; color: var(--ink); }
+.suggestion-actions { display: flex; align-items: center; gap: 10px; flex: none; }
+.suggestion-dismiss { width: 26px; height: 26px; font-size: 15px; }
 .needs-attention .section-label { padding: 0; }
 .attention-row { display: flex; flex-wrap: wrap; gap: 10px; }
 .attention-chip {

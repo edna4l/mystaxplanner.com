@@ -311,6 +311,8 @@ export default function HomeClient() {
           onOpenCardGroup={(label, cards) => setOpen({ kind: "dayfan", label, cards })}
           boardView={profile?.tweaks.boardView ?? "Stacks"}
           onChangeBoardView={(v) => updateTweaks({ boardView: v })}
+          dismissedSuggestions={profile?.tweaks.dismissedSuggestions ?? []}
+          onDismissSuggestion={(key) => updateTweaks({ dismissedSuggestions: [...(profile?.tweaks.dismissedSuggestions ?? []), key] })}
         />
       ) : view === "calendar" ? (
         <CalendarView

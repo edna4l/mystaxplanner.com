@@ -28,7 +28,11 @@ export interface Tweaks {
   typeHues: Partial<Record<string, number>>;
   // Board layout mode — see board-view.tsx. Persisted like any other
   // display preference rather than reset every session.
-  boardView: "Stacks" | "Cards" | "Timeline";
+  boardView: "Stacks" | "Cards" | "Timeline" | "Now/Next/Later";
+  // Smart Stack suggestion keys the user has dismissed (see
+  // src/lib/smartSuggestions.ts) — so a declined suggestion doesn't
+  // keep reappearing every visit.
+  dismissedSuggestions: string[];
 }
 
 export const TWEAK_DEFAULTS: Tweaks = {
@@ -44,6 +48,7 @@ export const TWEAK_DEFAULTS: Tweaks = {
   fontPair: "Friendly",
   typeHues: {},
   boardView: "Stacks",
+  dismissedSuggestions: [],
 };
 
 const PALETTE = {

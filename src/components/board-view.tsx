@@ -21,6 +21,8 @@ import { computeTodaySummary } from "@/lib/todaySummary";
 import { soonestDate } from "@/lib/date";
 import { TodayGlance } from "@/components/today-glance";
 import { NeedsAttention } from "@/components/needs-attention";
+import { SmartSuggestionBanner } from "@/components/smart-suggestion-banner";
+import { detectStackSuggestions } from "@/lib/smartSuggestions";
 
 type SortKey = "date" | "amount" | "amount-asc" | "name" | "name-desc" | "category";
 type BoardMode = Tweaks["boardView"];
@@ -60,6 +62,8 @@ export function BoardView({
   onOpenCardGroup,
   boardView,
   onChangeBoardView,
+  dismissedSuggestions,
+  onDismissSuggestion,
 }: {
   board: BoardSlot[];
   onOpenCard: (card: Card, rect: DOMRect | null) => void;
@@ -70,6 +74,8 @@ export function BoardView({
   onOpenCardGroup: (label: string, cards: Card[]) => void;
   boardView: BoardMode;
   onChangeBoardView: (mode: BoardMode) => void;
+  dismissedSuggestions: string[];
+  onDismissSuggestion: (key: string) => void;
 }) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -85,6 +91,7 @@ export function BoardView({
   // below like any other non-recurring card. See src/lib/customStack.ts.
   const customGroups = useMemo(() => groupCustomTypesForBoard(board).groups, [board]);
   const todaySummary = useMemo(() => computeTodaySummary(board), [board]);
+  const suggestions = useMemo(() => detectStackSuggestions(board, dismissedSuggestions), [board, dismissedSuggestions]);
 
   const groupedCardIds = useMemo(() => {
     const ids = new Set<string>();
@@ -243,6 +250,7 @@ export function BoardView({
     <>
       <TodayGlance summary={todaySummary} onOpenCard={onOpenCard} />
       <NeedsAttention summary={todaySummary} onOpenCard={onOpenCard} onOpenCategory={onOpenCardGroup} />
+      <SmartSuggestionBanner suggestions={suggestions} onReview={onOpenCardGroup} onDismiss={onDismissSuggestion} />
       <div className="board-sort-row">
         <div className="view-switch">
           {BOARD_MODES.map((m) => (
