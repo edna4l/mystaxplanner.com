@@ -7,6 +7,7 @@ import type { BoardSlot, Card, Profile } from "@/lib/types";
 import type { ParsedQuickAdd } from "@/lib/quickAdd";
 import { isVirtualId, parseVirtualId } from "@/lib/recurrence";
 import { applyTheme, applyBrand, applyTypeHues } from "@/lib/theme";
+import { computeTodaySummary } from "@/lib/todaySummary";
 import { Topbar, type AppView } from "@/components/topbar";
 import { BoardView } from "@/components/board-view";
 import { TodayView } from "@/components/today-view";
@@ -22,6 +23,7 @@ import { SearchModal } from "@/components/search-modal";
 import { Onboarding } from "@/components/onboarding";
 import { SettingsModal } from "@/components/settings-modal";
 import { Toast } from "@/components/toast";
+import { FocusDeck } from "@/components/focus-deck";
 
 type Open =
   | { kind: "card"; cardId: string; virtualCard?: Card }
@@ -47,6 +49,10 @@ export default function HomeClient() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [toast, setToast] = useState<{ msg: string; cards: Card[]; skips: { id: string; wasVirtual: boolean }[] } | null>(null);
+  // A captured snapshot, not a live-recomputed prop — so completing a
+  // card advances the deck deterministically instead of the queue
+  // reshuffling under the user as the board updates mid-flow.
+  const [focusQueue, setFocusQueue] = useState<Card[] | null>(null);
 
   useEffect(() => {
     if (profile) applyTheme(profile.tweaks);
@@ -216,6 +222,17 @@ export default function HomeClient() {
     stopRecurrence(openCard.id);
   }
 
+  function startFocusDeck() {
+    const summary = computeTodaySummary(board);
+    const seen = new Set<string>();
+    const queue = [...summary.overdue, ...summary.dueToday, ...summary.habitsRisk].filter((c) => {
+      if (seen.has(c.id)) return false;
+      seen.add(c.id);
+      return true;
+    });
+    setFocusQueue(queue);
+  }
+
   // A recurring occurrence (virtual, or a materialized child of a root
   // that still has recur_freq) can't just be hard-deleted — the generator
   // would immediately regenerate an equivalent virtual occurrence for that
@@ -296,6 +313,7 @@ export default function HomeClient() {
           onOpenCard={openCardHandler}
           onUpdate={handleUpdateCard}
           onGo={() => setView("board")}
+          onStartFocusDeck={startFocusDeck}
         />
       ) : view === "board" ? (
         <BoardView
@@ -422,6 +440,10 @@ export default function HomeClient() {
           onAction={toast.cards.length || toast.skips.length ? undoToast : undefined}
           onDismiss={() => setToast(null)}
         />
+      ) : null}
+
+      {focusQueue ? (
+        <FocusDeck queue={focusQueue} onUpdate={handleUpdateCard} onClose={() => setFocusQueue(null)} />
       ) : null}
     </div>
   );

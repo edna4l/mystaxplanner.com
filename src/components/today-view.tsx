@@ -39,11 +39,13 @@ export function TodayView({
   onOpenCard,
   onUpdate,
   onGo,
+  onStartFocusDeck,
 }: {
   board: BoardSlot[];
   onOpenCard: (card: Card, rect: DOMRect | null) => void;
   onUpdate: (cardId: string, patch: Partial<Card>) => void;
   onGo: (dest: "board") => void;
+  onStartFocusDeck: () => void;
 }) {
   const { dueToday, overdue, weekBills, weekTotal, habits, habitsRisk } = useMemo(
     () => computeTodaySummary(board),
@@ -74,6 +76,9 @@ export function TodayView({
           <div className="today-hero-text">
             <span className="today-phase">{dateLine}</span>
             <h2 className="today-headline">{headline}</h2>
+          </div>
+          <div className="today-hero-actions">
+            <button className="ob-start today-focus-btn" onClick={onStartFocusDeck}>Start my day</button>
           </div>
         </div>
       </div>
