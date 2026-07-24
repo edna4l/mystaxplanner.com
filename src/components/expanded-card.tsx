@@ -185,11 +185,17 @@ export function ExpandedCard({
   onClose,
   onUpdate,
   onDelete,
+  series,
+  onSplitSeries,
+  onStopRecurrence,
 }: {
   card: Card;
   onClose: () => void;
   onUpdate: (patch: Partial<Card>) => void;
   onDelete: () => void;
+  series?: { isRoot: boolean } | null;
+  onSplitSeries?: () => void;
+  onStopRecurrence?: () => void;
 }) {
   const T = typeMeta(card.type);
   return (
@@ -198,7 +204,7 @@ export function ExpandedCard({
         <div className="panel-head">
           <span className="type-tag big"><span className="swatch" />{T.label}</span>
           <div className="panel-actions">
-            <button className="icon-btn" onClick={onDelete}>Delete</button>
+            <button className="icon-btn" onClick={onDelete}>{series && !series.isRoot ? "Skip" : "Delete"}</button>
             <button className="icon-btn round" onClick={onClose}>×</button>
           </div>
         </div>
@@ -210,6 +216,14 @@ export function ExpandedCard({
         />
         <CoverPicker card={card} onUpdate={onUpdate} />
         <ExpandedBody card={card} onUpdate={onUpdate} />
+        {series ? (
+          <div className="series-actions">
+            {!series.isRoot ? (
+              <button className="link-btn" onClick={onSplitSeries}>Change this and future occurrences…</button>
+            ) : null}
+            <button className="link-btn" onClick={onStopRecurrence}>Stop repeating after this</button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

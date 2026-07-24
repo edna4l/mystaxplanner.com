@@ -36,3 +36,10 @@ export function parseISO(iso: string | null | undefined) {
 export function toISODate(y: number, m: number, d: number) {
   return y + "-" + pad2(m + 1) + "-" + pad2(d);
 }
+
+export function addDaysISO(iso: string, days: number) {
+  const p = parseISO(iso);
+  if (!p) return iso;
+  const d = new Date(p.y, p.m, p.d + days);
+  return toISODate(d.getFullYear(), d.getMonth(), d.getDate());
+}

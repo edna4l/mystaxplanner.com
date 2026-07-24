@@ -33,7 +33,8 @@ export default function HomeClient() {
   const {
     board, loading, customTypes, addCard, updateCard, deleteCard, merge, unstack, ungroup,
     stampCard, extendBills, bulkDeleteBills, bulkMarkBills, applyCardOrder, restoreCards,
-    materializeOccurrence, createCustomType, updateCustomType, deleteCustomType,
+    materializeOccurrence, skipOccurrence, stopRecurrence, splitSeriesFrom,
+    createCustomType, updateCustomType, deleteCustomType,
   } = useBoard();
   const { profile, loading: profileLoading, updateProfile, updateTweaks } = useProfile();
   const [view, setView] = useState<AppView>("today");
@@ -77,6 +78,19 @@ export default function HomeClient() {
     }
     return null;
   }, [open, board]);
+
+  // Whether the open card belongs to a recurring bill series — the root
+  // itself (carries recur_freq directly) or a materialized/virtual
+  // occurrence of one (recur_freq lives on its root, looked up here since
+  // occurrence rows never carry it — see materializeOccurrence).
+  const openCardSeries = useMemo(() => {
+    if (!openCard || openCard.type !== "bill") return null;
+    if (openCard.recur_freq) return { isRoot: true as const };
+    if (!openCard.origin) return null;
+    let root: Card | null = null;
+    board.forEach((s) => s.cards.forEach((c) => { if (c.id === openCard.origin) root = c; }));
+    return root && (root as Card).recur_freq ? { isRoot: false as const } : null;
+  }, [openCard, board]);
 
   const openSlot = useMemo<BoardSlot | null>(() => {
     if (!open || open.kind !== "fan") return null;
@@ -160,8 +174,8 @@ export default function HomeClient() {
 
   function handleDeleteCard() {
     if (!openCard) return;
-    if (isVirtualId(openCard.id)) {
-      materializeOccurrence(openCard.id, { skipped: true });
+    if (openCardSeries && !openCardSeries.isRoot) {
+      skipOccurrence(openCard.id);
       setOpen(null);
       setToast({ msg: "Occurrence skipped", cards: [] });
       return;
@@ -170,6 +184,17 @@ export default function HomeClient() {
     deleteCard(openCard.id);
     setOpen(null);
     setToast({ msg: "Card deleted", cards: [snapshot] });
+  }
+
+  async function handleSplitSeries() {
+    if (!openCard) return;
+    const newRoot = await splitSeriesFrom(openCard.id);
+    if (newRoot) setOpen({ kind: "card", cardId: newRoot.id });
+  }
+
+  function handleStopRecurrence() {
+    if (!openCard) return;
+    stopRecurrence(openCard.id);
   }
 
   function handleBulkDeleteBills(ids: string[]) {
@@ -263,6 +288,9 @@ export default function HomeClient() {
           onClose={() => setOpen(null)}
           onUpdate={(patch) => handleUpdateCard(openCard.id, patch)}
           onDelete={handleDeleteCard}
+          series={openCardSeries}
+          onSplitSeries={handleSplitSeries}
+          onStopRecurrence={handleStopRecurrence}
         />
       ) : null}
 

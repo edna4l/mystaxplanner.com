@@ -9,8 +9,8 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { BoardSlot, Card, Slot, CardTypeDef } from "@/lib/types";
 import { newCardFields, defaultTitleFor, registerCardType, unregisterCardType } from "@/lib/cardTypes";
-import { parseISO, toISODate, shortISO } from "@/lib/date";
-import { parseVirtualId } from "@/lib/recurrence";
+import { parseISO, toISODate, shortISO, addDaysISO } from "@/lib/date";
+import { parseVirtualId, isVirtualId } from "@/lib/recurrence";
 
 const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -164,6 +164,137 @@ export function useBoard() {
 
     setBoard((b) => [{ ...slot, cards: [card as Card] }, ...b]);
     return card as Card;
+  }
+
+  // Marks a single occurrence as skipped so the generator omits it, without
+  // touching any other occurrence in the series. Virtual occurrences get
+  // materialized with skipped:true; already-materialized exception rows are
+  // just flagged in place (a plain delete would remove the divergence and
+  // let the rule regenerate a virtual occurrence for that date instead).
+  async function skipOccurrence(id: string) {
+    if (isVirtualId(id)) {
+      await materializeOccurrence(id, { skipped: true });
+      return;
+    }
+    setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (c.id === id ? { ...c, skipped: true } : c)) })));
+    await supabase.from("cards").update({ skipped: true }).eq("id", id);
+  }
+
+  // Ends a series so nothing generates after the given occurrence — the
+  // occurrence itself (root or child) still stands, but recur_until caps
+  // the rule right there. Non-destructive: any already-materialized rows
+  // past that date stay in the database, just no longer surfaced by the
+  // generator (mergeOccurrences only visits projected dates).
+  async function stopRecurrence(cardId: string) {
+    let root: Card | null = null;
+    let stopDate: string | null = null;
+
+    if (isVirtualId(cardId)) {
+      const parsed = parseVirtualId(cardId);
+      if (!parsed) return;
+      stopDate = parsed.date;
+      board.forEach((s) => s.cards.forEach((c) => { if (c.id === parsed.rootId) root = c; }));
+    } else {
+      let card: Card | null = null;
+      board.forEach((s) => s.cards.forEach((c) => { if (c.id === cardId) card = c; }));
+      if (!card) return;
+      const cc = card as Card;
+      if (!cc.origin) {
+        root = cc;
+        stopDate = cc.date;
+      } else {
+        stopDate = cc.occurrence_date || cc.date;
+        board.forEach((s) => s.cards.forEach((c) => { if (c.id === cc.origin) root = c; }));
+      }
+    }
+    if (!root || !stopDate) return;
+    const r = root as Card;
+
+    setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (c.id === r.id ? { ...c, recur_until: stopDate } : c)) })));
+    await supabase.from("cards").update({ recur_until: stopDate }).eq("id", r.id);
+  }
+
+  // "Edit this and future occurrences": caps the existing series the day
+  // before this occurrence, then turns this occurrence into a new series
+  // root carrying the rest of the original recur_freq/recur_until — so any
+  // field edits the caller makes next (via the normal onUpdate path) only
+  // affect this occurrence forward, leaving earlier occurrences untouched.
+  // Returns the new root card so the caller can retarget an open editor.
+  async function splitSeriesFrom(occurrenceId: string): Promise<Card | null> {
+    if (!userId) return null;
+    let root: Card | null = null;
+    let occurrenceDate: string | null = null;
+    let existingRow: Card | null = null;
+
+    if (isVirtualId(occurrenceId)) {
+      const parsed = parseVirtualId(occurrenceId);
+      if (!parsed) return null;
+      occurrenceDate = parsed.date;
+      board.forEach((s) => s.cards.forEach((c) => { if (c.id === parsed.rootId) root = c; }));
+    } else {
+      board.forEach((s) => s.cards.forEach((c) => { if (c.id === occurrenceId) existingRow = c; }));
+      if (!existingRow) return null;
+      occurrenceDate = (existingRow as Card).occurrence_date || (existingRow as Card).date;
+      board.forEach((s) => s.cards.forEach((c) => { if (c.id === (existingRow as Card).origin) root = c; }));
+    }
+    if (!root || !occurrenceDate) return null;
+    const r = root as Card;
+    const oldUntil = r.recur_until;
+    const dayBefore = addDaysISO(occurrenceDate, -1);
+
+    await supabase.from("cards").update({ recur_until: dayBefore }).eq("id", r.id);
+    setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (c.id === r.id ? { ...c, recur_until: dayBefore } : c)) })));
+
+    let newRoot: Card;
+    if (existingRow) {
+      const updates: Partial<Card> = { origin: null, recur_freq: r.recur_freq, recur_until: oldUntil, occurrence_date: null };
+      await supabase.from("cards").update(updates).eq("id", (existingRow as Card).id);
+      newRoot = { ...(existingRow as Card), ...updates };
+      setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (c.id === newRoot.id ? newRoot : c)) })));
+    } else {
+      const { data: slot } = await supabase.from("slots").insert({ user_id: userId, name: "" }).select().single();
+      if (!slot) return null;
+      const copyFields = { ...r } as Partial<Card>;
+      delete copyFields.id;
+      delete copyFields.created_at;
+      delete copyFields.updated_at;
+      delete copyFields.slot_id;
+      const { data: card } = await supabase
+        .from("cards")
+        .insert({
+          ...copyFields,
+          user_id: userId,
+          slot_id: slot.id,
+          date: occurrenceDate,
+          due: shortISO(occurrenceDate),
+          occurrence_date: null,
+          origin: null,
+          recur_freq: r.recur_freq,
+          recur_until: oldUntil,
+          paid: false,
+          skipped: false,
+          position_in_slot: 0,
+        })
+        .select()
+        .single();
+      if (!card) return null;
+      newRoot = card as Card;
+      setBoard((b) => [{ ...slot, cards: [newRoot] }, ...b]);
+    }
+
+    // Any later materialized exceptions of the old root now belong under
+    // the new root instead (the old root's rule no longer reaches them).
+    const laterExceptions: Card[] = [];
+    board.forEach((s) => s.cards.forEach((c) => {
+      if (c.origin === r.id && c.id !== newRoot.id && c.occurrence_date && c.occurrence_date >= (occurrenceDate as string)) laterExceptions.push(c);
+    }));
+    if (laterExceptions.length) {
+      const ids = laterExceptions.map((c) => c.id);
+      await supabase.from("cards").update({ origin: newRoot.id }).in("id", ids);
+      setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (ids.includes(c.id) ? { ...c, origin: newRoot.id } : c)) })));
+    }
+
+    return newRoot;
   }
 
   // --- custom card types -----------------------------------------------------
@@ -451,6 +582,7 @@ export function useBoard() {
   return {
     board, loading, userId, customTypes, reload, addCard, updateCard, deleteCard, merge, unstack, ungroup, renameSlot,
     stampCard, extendBills, bulkDeleteBills, bulkMarkBills, applyCardOrder, restoreCards, materializeOccurrence,
+    skipOccurrence, stopRecurrence, splitSeriesFrom,
     createCustomType, updateCustomType, deleteCustomType,
   };
 }
