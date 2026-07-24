@@ -377,14 +377,21 @@ export function useBoard() {
       siblings.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
       const [newRoot, ...others] = siblings;
 
-      await supabase.from("cards").update({ origin: null }).eq("id", newRoot.id);
+      // Carry the deleted root's recurring-series rule over to whichever
+      // sibling gets promoted — without this, the promoted card becomes a
+      // plain one-off (recur_freq null) and every other sibling still
+      // pointing at it via origin silently drops out of the series: the
+      // generator (recurrence.ts) and Board's bill aggregation
+      // (billBoardStack.ts) both key series membership off the root
+      // actually having recur_freq set.
+      await supabase.from("cards").update({ origin: null, recur_freq: card.recur_freq, recur_until: card.recur_until }).eq("id", newRoot.id);
       const otherIds = others.map((o) => o.id);
       if (otherIds.length) await supabase.from("cards").update({ origin: newRoot.id }).in("id", otherIds);
 
       setBoard((b) => b.map((s) => ({
         ...s,
         cards: s.cards.map((c) => {
-          if (c.id === newRoot.id) return { ...c, origin: null };
+          if (c.id === newRoot.id) return { ...c, origin: null, recur_freq: card.recur_freq, recur_until: card.recur_until };
           if (otherIds.includes(c.id)) return { ...c, origin: newRoot.id };
           return c;
         }),

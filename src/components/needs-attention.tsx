@@ -1,44 +1,33 @@
 "use client";
 
-// "Needs attention" row for the top of the Board — overdue items
-// (any type) and habits not yet done today, pulled from the same
-// computeTodaySummary data as TodayView and TodayGlance.
+// "Needs attention" tile for the top of the Board — overdue items (any
+// type) and habits not yet done today, pulled from the same
+// computeTodaySummary data as TodayView and TodayGlance. Rendered as a
+// single layered stack tile (reusing StackTile's look) rather than a
+// row of individual cards, so it stays a fixed small footprint no
+// matter how many things need attention — fans open on click.
 import type { Card } from "@/lib/types";
 import type { TodaySummary } from "@/lib/todaySummary";
-import { typeMeta } from "@/lib/cardTypes";
+import { StackTile } from "@/components/square-card";
+
+export function needsAttentionItems(summary: TodaySummary): Card[] {
+  return [...summary.overdue, ...summary.habitsRisk];
+}
 
 export function NeedsAttention({
   summary,
-  onOpenCard,
+  onOpen,
 }: {
   summary: TodaySummary;
-  onOpenCard: (card: Card, rect: DOMRect | null) => void;
+  onOpen: (cards: Card[]) => void;
 }) {
-  const items: { card: Card; reason: string }[] = [
-    ...summary.overdue.map((c) => ({ card: c, reason: c.type === "bill" ? "Overdue bill" : "Overdue" })),
-    ...summary.habitsRisk.map((c) => ({ card: c, reason: "Missed habit" })),
-  ].slice(0, 6);
-
+  const items = needsAttentionItems(summary);
   if (!items.length) return null;
 
   return (
     <div className="needs-attention">
-      <span className="section-label">Needs attention</span>
-      <div className="na-row">
-        {items.map(({ card, reason }) => {
-          const T = typeMeta(card.type);
-          return (
-            <button
-              key={card.id}
-              className="na-item"
-              style={{ "--hue": T.hue } as React.CSSProperties}
-              onClick={(e) => onOpenCard(card, e.currentTarget.getBoundingClientRect())}
-            >
-              <span className="na-title">{card.title}</span>
-              <span className="na-reason">{reason}</span>
-            </button>
-          );
-        })}
+      <div className="slot na-slot">
+        <StackTile cards={items} slotName="Needs attention" onOpen={() => onOpen(items)} />
       </div>
     </div>
   );

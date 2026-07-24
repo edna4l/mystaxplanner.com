@@ -304,6 +304,7 @@ export default function HomeClient() {
             secondaryAction: { label: "Review bills →", onClick: () => { setOpen(null); setView("bills"); } },
           })}
           onReviewBills={() => setView("bills")}
+          onOpenNeedsAttention={(cards) => setOpen({ kind: "dayfan", label: "Needs attention", cards })}
         />
       ) : view === "calendar" ? (
         <CalendarView

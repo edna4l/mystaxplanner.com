@@ -17,6 +17,7 @@ export function BoardView({
   onMerge,
   onOpenBillStack,
   onReviewBills,
+  onOpenNeedsAttention,
 }: {
   board: BoardSlot[];
   onOpenCard: (card: Card, rect: DOMRect | null) => void;
@@ -24,6 +25,7 @@ export function BoardView({
   onMerge: (sourceSlotId: string, targetSlotId: string) => void;
   onOpenBillStack: (cards: Card[]) => void;
   onReviewBills: () => void;
+  onOpenNeedsAttention: (cards: Card[]) => void;
 }) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export function BoardView({
   return (
     <>
       <TodayGlance summary={todaySummary} onOpenCard={onOpenCard} />
-      <NeedsAttention summary={todaySummary} onOpenCard={onOpenCard} />
+      <NeedsAttention summary={todaySummary} onOpen={onOpenNeedsAttention} />
       <main className="board">
         {billSummary ? (
           <div className="slot">
