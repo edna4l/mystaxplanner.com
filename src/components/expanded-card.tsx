@@ -111,10 +111,30 @@ function ExpandedBody({ card, onUpdate }: { card: Card; onUpdate: (patch: Partia
           <label className="field"><span className="field-label">Due</span>
             <input className="inp" value={card.due || ""} onChange={(e) => onUpdate({ due: e.target.value })} />
           </label>
-          <label className="field"><span className="field-label">Repeats</span>
-            <input className="inp" value={card.recur || ""} onChange={(e) => onUpdate({ recur: e.target.value })} />
-          </label>
+          {!card.origin ? (
+            <label className="field"><span className="field-label">Repeats</span>
+              <select
+                className="inp"
+                value={card.recur_freq || ""}
+                onChange={(e) => {
+                  const v = e.target.value as Card["recur_freq"];
+                  onUpdate(v ? { recur_freq: v } : { recur_freq: null, recur_until: null });
+                }}
+              >
+                <option value="">Does not repeat</option>
+                <option value="monthly">Monthly</option>
+                <option value="weekly">Weekly</option>
+                <option value="biweekly">Biweekly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </label>
+          ) : null}
         </div>
+        {!card.origin && card.recur_freq ? (
+          <label className="field"><span className="field-label">Repeat until (optional)</span>
+            <input className="inp" type="date" value={card.recur_until || ""} onChange={(e) => onUpdate({ recur_until: e.target.value || null })} />
+          </label>
+        ) : null}
         <label className="field">
           <span className="field-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <input type="checkbox" checked={!!card.autopay} onChange={(e) => onUpdate({ autopay: e.target.checked })} />

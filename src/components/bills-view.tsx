@@ -4,11 +4,11 @@
 // layouts (List/Calendar/Cards/Category), sort controls, a payoff
 // tracker, a 6-month spend trend, due-soon highlighting, and bulk
 // select/mark/delete.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
 import { parseISO, money, toISODate } from "@/lib/date";
-import { expandRecurringBills, isVirtualId } from "@/lib/recurrence";
+import { expandRecurringBills } from "@/lib/recurrence";
 import { SquareCard } from "@/components/square-card";
 import * as fx from "@/lib/fx";
 
@@ -273,13 +273,12 @@ function BillsTrend({ allBills, vy, vm }: { allBills: Card[]; vy: number; vm: nu
 }
 
 export function BillsView({
-  board, onUpdate, onOpen, onAddBill, onExtend, onBulkDelete, onBulkMark,
+  board, onUpdate, onOpen, onAddBill, onBulkDelete, onBulkMark,
 }: {
   board: { cards: Card[] }[];
   onUpdate: (id: string, patch: Partial<Card>) => void;
   onOpen: (b: Card) => void;
   onAddBill: () => void;
-  onExtend: (cards: Card[], targetY: number, targetM: number) => void;
   onBulkDelete: (ids: string[]) => void;
   onBulkMark: (ids: string[], paid: boolean) => void;
 }) {
@@ -290,7 +289,6 @@ export function BillsView({
   const [sortBy, setSortBy] = useState<SortKey>("date");
   const [subSort, setSubSort] = useState<SortKey>("date");
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
-  const autoTried = useRef<Set<string>>(new Set());
 
   function toggleSelect(id: string) {
     setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -311,45 +309,13 @@ export function BillsView({
     [allBills, monthStart, monthEnd],
   );
 
-  const recurring = useMemo(() => bills.filter((b) => {
-    const p = parseISO(b.date);
-    if (!p || p.y !== vy || p.m !== vm) return false;
-    if ((b.recur || "Monthly") === "None") return false;
-    // Already covered by the virtual-occurrence generator (recurrence.ts) —
-    // Extend would just insert a redundant duplicate row for these.
-    if (isVirtualId(b.id) || b.recur_freq) return false;
-    return true;
-  }), [bills, vy, vm]);
-
   const total = bills.reduce((a, c) => a + Number(c.amount || 0), 0);
   const unpaid = bills.filter((b) => !b.paid);
   const dueSum = unpaid.reduce((a, c) => a + Number(c.amount || 0), 0);
   const paidSum = total - dueSum;
   const paidCount = bills.length - unpaid.length;
 
-  useEffect(() => {
-    const key = vy + "-" + vm;
-    if (bills.length === 0 && !autoTried.current.has(key)) {
-      autoTried.current.add(key);
-      let py = vy, pm = vm - 1;
-      if (pm < 0) { pm = 11; py -= 1; }
-      const prevRecurring = allBills.filter((b) => {
-        const p = parseISO(b.date);
-        return !!p && p.y === py && p.m === pm && (b.recur || "Monthly") !== "None";
-      });
-      if (prevRecurring.length) onExtend(prevRecurring, vy, vm);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vy, vm, bills.length, allBills]);
-
   useEffect(() => { setSelected(new Set()); }, [vy, vm, layout]);
-
-  function extend(dir: number) {
-    let ty = vy, tm = vm + dir;
-    if (tm < 0) { tm = 11; ty -= 1; } else if (tm > 11) { tm = 0; ty += 1; }
-    onExtend(recurring, ty, tm);
-    setVy(ty); setVm(tm);
-  }
 
   return (
     <div className="bills">
@@ -391,8 +357,6 @@ export function BillsView({
               <option value="name">Then by: A→Z</option>
             </select>
           ) : null}
-          <button className="bext" onClick={() => extend(-1)} disabled={!recurring.length} title="Copy this month's recurring bills into the previous month">← Extend back</button>
-          <button className="bext" onClick={() => extend(1)} disabled={!recurring.length} title="Copy this month's recurring bills into the next month">Extend forward →</button>
         </div>
       </div>
 
@@ -414,7 +378,7 @@ export function BillsView({
         </div>
       ) : null}
       {bills.length === 0 ? (
-        <div className="bills-empty">No bills in {BMON[vm]} {vy}. Use the arrows to change month, "Extend" to roll bills over, or "+ Add bill".</div>
+        <div className="bills-empty">No bills in {BMON[vm]} {vy}. Use the arrows to change month, or "+ Add bill".</div>
       ) : layout === "Calendar" ? (
         <BillsCalendar vy={vy} vm={vm} bills={bills} onUpdate={onUpdate} onOpen={onOpen} />
       ) : layout === "Cards" ? (

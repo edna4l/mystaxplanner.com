@@ -32,7 +32,7 @@ type Open =
 export default function HomeClient() {
   const {
     board, loading, customTypes, addCard, updateCard, deleteCard, merge, unstack, ungroup,
-    stampCard, extendBills, bulkDeleteBills, bulkMarkBills, applyCardOrder, restoreCards,
+    stampCard, bulkDeleteBills, bulkMarkBills, applyCardOrder, restoreCards,
     materializeOccurrence, skipOccurrence, stopRecurrence, splitSeriesFrom,
     createCustomType, updateCustomType, deleteCustomType,
   } = useBoard();
@@ -265,7 +265,6 @@ export default function HomeClient() {
           onUpdate={handleUpdateCard}
           onOpen={openCardHandler}
           onAddBill={() => handleAdd("bill")}
-          onExtend={extendBills}
           onBulkDelete={handleBulkDeleteBills}
           onBulkMark={bulkMarkBills}
         />
