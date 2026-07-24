@@ -6,6 +6,9 @@ import type { BoardSlot, Card } from "@/lib/types";
 import { SquareCard, StackTile } from "@/components/square-card";
 import { BillStackTile } from "@/components/bill-stack-tile";
 import { summarizeBillsForBoard } from "@/lib/billBoardStack";
+import { computeTodaySummary } from "@/lib/todaySummary";
+import { TodayGlance } from "@/components/today-glance";
+import { NeedsAttention } from "@/components/needs-attention";
 
 export function BoardView({
   board,
@@ -33,6 +36,7 @@ export function BoardView({
     () => (billSummary ? new Set(billSummary.groups.flatMap((g) => g.realCards.map((c) => c.id))) : null),
     [billSummary],
   );
+  const todaySummary = useMemo(() => computeTodaySummary(board), [board]);
 
   function dragPropsFor(slotId: string): React.HTMLAttributes<HTMLDivElement> {
     return {
@@ -50,33 +54,37 @@ export function BoardView({
   }
 
   return (
-    <main className="board">
-      {billSummary ? (
-        <div className="slot">
-          <BillStackTile
-            summary={billSummary}
-            onOpen={() => onOpenBillStack(billSummary.groups.flatMap((g) => g.realCards))}
-            onReviewBills={onReviewBills}
-          />
-        </div>
-      ) : null}
-      {board.map((s) => {
-        if (billCardIds && s.cards.length === 1 && billCardIds.has(s.cards[0].id)) return null;
-        const over = overId === s.id;
-        const dp = dragPropsFor(s.id);
-        if (s.cards.length === 1) {
+    <>
+      <TodayGlance summary={todaySummary} onOpenCard={onOpenCard} />
+      <NeedsAttention summary={todaySummary} onOpenCard={onOpenCard} />
+      <main className="board">
+        {billSummary ? (
+          <div className="slot">
+            <BillStackTile
+              summary={billSummary}
+              onOpen={() => onOpenBillStack(billSummary.groups.flatMap((g) => g.realCards))}
+              onReviewBills={onReviewBills}
+            />
+          </div>
+        ) : null}
+        {board.map((s) => {
+          if (billCardIds && s.cards.length === 1 && billCardIds.has(s.cards[0].id)) return null;
+          const over = overId === s.id;
+          const dp = dragPropsFor(s.id);
+          if (s.cards.length === 1) {
+            return (
+              <div key={s.id} className={"slot" + (over ? " over" : "") + (dragId === s.id ? " dragging" : "")} {...dp}>
+                <SquareCard card={s.cards[0]} onOpen={(e) => onOpenCard(s.cards[0], e.currentTarget.getBoundingClientRect())} />
+              </div>
+            );
+          }
           return (
             <div key={s.id} className={"slot" + (over ? " over" : "") + (dragId === s.id ? " dragging" : "")} {...dp}>
-              <SquareCard card={s.cards[0]} onOpen={(e) => onOpenCard(s.cards[0], e.currentTarget.getBoundingClientRect())} />
+              <StackTile cards={s.cards} slotName={s.name} onOpen={() => onOpenStack(s)} />
             </div>
           );
-        }
-        return (
-          <div key={s.id} className={"slot" + (over ? " over" : "") + (dragId === s.id ? " dragging" : "")} {...dp}>
-            <StackTile cards={s.cards} slotName={s.name} onOpen={() => onOpenStack(s)} />
-          </div>
-        );
-      })}
-    </main>
+        })}
+      </main>
+    </>
   );
 }

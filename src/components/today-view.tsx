@@ -6,13 +6,9 @@
 import { useMemo } from "react";
 import type { BoardSlot, Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
-import { todayISO, shortISO, money } from "@/lib/date";
-import { expandRecurringBills } from "@/lib/recurrence";
+import { shortISO, money } from "@/lib/date";
+import { computeTodaySummary } from "@/lib/todaySummary";
 import * as fx from "@/lib/fx";
-
-function isDone(c: Card) {
-  return !!(c.checklist && c.checklist.length && c.checklist.every((x) => x.done));
-}
 
 function TodayRow({ card, onOpen, onPay, onMark }: { card: Card; onOpen: (c: Card, rect: DOMRect | null) => void; onPay: (c: Card, el: HTMLElement) => void; onMark: (c: Card, el: HTMLElement) => void }) {
   const T = typeMeta(card.type);
@@ -48,33 +44,10 @@ export function TodayView({
   onUpdate: (cardId: string, patch: Partial<Card>) => void;
   onGo: (dest: "board") => void;
 }) {
-  const today = todayISO(0);
-  const weekEnd = todayISO(7);
-  const rangeStart = todayISO(-60);
-  const rawCards = useMemo(() => {
-    const out: Card[] = [];
-    board.forEach((s) => s.cards.forEach((c) => out.push(c)));
-    return out;
-  }, [board]);
-  const all = useMemo(() => {
-    const nonBills = rawCards.filter((c) => c.type !== "bill");
-    const bills = rawCards.filter((c) => c.type === "bill");
-    return [...nonBills, ...expandRecurringBills(bills, rangeStart, weekEnd)];
-  }, [rawCards, rangeStart, weekEnd]);
-
-  const dueToday = all.filter(
-    (c) => c.type !== "habit" && ((c.date && c.date === today) || (!c.date && /^today$/i.test((c.due || "").trim()))) && !(c.type === "bill" && c.paid) && !isDone(c),
+  const { dueToday, overdue, weekBills, weekTotal, habits, habitsRisk } = useMemo(
+    () => computeTodaySummary(board),
+    [board],
   );
-  const overdue = all.filter((c) => c.type !== "habit" && c.date && c.date < today && !(c.type === "bill" && c.paid) && !isDone(c));
-  const weekBills = all
-    .filter((c) => c.type === "bill" && !c.paid && c.date && c.date >= today && c.date <= weekEnd)
-    .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  const habits = all.filter((c) => c.type === "habit");
-  const habitsRisk = habits.filter((c) => {
-    const d = c.days || [];
-    return !d[d.length - 1];
-  });
-  const weekTotal = weekBills.reduce((a, c) => a + Number(c.amount || 0), 0);
 
   function pay(card: Card, el: HTMLElement) {
     fx.coin(el);
