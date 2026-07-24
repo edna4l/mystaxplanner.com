@@ -44,27 +44,32 @@ function nextDueFor(root: Card, exceptions: Card[], today: string): BillGroup["n
   };
 }
 
-// Only considers bills sitting alone in their own slot — anything the
-// user has manually drag-stacked together (bill or not) is left
-// completely alone, consistent with "manual grouping stays manual."
+// Series roots are identified from every bill card on the board,
+// regardless of which slot they're sitting in — a root that happens to
+// be manually drag-stacked with other cards still needs to be
+// recognized, otherwise every one of its (normally standalone) children
+// would incorrectly scatter as individual tiles instead of folding into
+// the aggregate. Board-view.tsx is what actually decides what to pull
+// out of the grid, and it only ever excludes cards from single-card
+// slots — a root's own manual stack is left exactly as the user made
+// it; only its otherwise-standalone children (and one-offs) disappear
+// into this aggregate, consistent with "manual grouping stays manual."
 export function summarizeBillsForBoard(board: BoardSlot[], today = todayISO()): BoardBillSummary | null {
-  const standaloneBills: Card[] = [];
-  board.forEach((s) => {
-    if (s.cards.length === 1 && s.cards[0].type === "bill") standaloneBills.push(s.cards[0]);
-  });
-  if (!standaloneBills.length) return null;
+  const allBills: Card[] = [];
+  board.forEach((s) => s.cards.forEach((c) => { if (c.type === "bill") allBills.push(c); }));
+  if (!allBills.length) return null;
 
   const roots = new Map<string, Card>();
   const childrenByRoot = new Map<string, Card[]>();
   const oneOffs: Card[] = [];
 
-  standaloneBills.forEach((c) => {
+  allBills.forEach((c) => {
     if (!c.origin) {
       if (c.recur_freq) roots.set(c.id, c);
       else oneOffs.push(c);
     }
   });
-  standaloneBills.forEach((c) => {
+  allBills.forEach((c) => {
     if (c.origin && roots.has(c.origin)) {
       const arr = childrenByRoot.get(c.origin) ?? [];
       arr.push(c);
