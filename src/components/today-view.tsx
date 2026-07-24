@@ -8,6 +8,7 @@ import type { BoardSlot, Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
 import { shortISO, money } from "@/lib/date";
 import { computeTodaySummary } from "@/lib/todaySummary";
+import { markHabitDoneToday } from "@/lib/habits";
 import * as fx from "@/lib/fx";
 
 function TodayRow({ card, onOpen, onPay, onMark }: { card: Card; onOpen: (c: Card, rect: DOMRect | null) => void; onPay: (c: Card, el: HTMLElement) => void; onMark: (c: Card, el: HTMLElement) => void }) {
@@ -54,14 +55,10 @@ export function TodayView({
     onUpdate(card.id, { paid: true });
   }
   function mark(card: Card, el: HTMLElement) {
-    const days = (card.days || []).slice();
-    const i = days.length - 1;
-    days[i] = true;
-    let s = 0;
-    for (let j = days.length - 1; j >= 0; j--) { if (days[j]) s++; else break; }
-    if (s === 7 || s === 30 || s === 100) fx.streak(s);
+    const { days, streak, milestone } = markHabitDoneToday(card);
+    if (milestone) fx.streak(streak);
     else fx.burst(el, { emoji: "🔥", count: 14 });
-    onUpdate(card.id, { days, streak: s });
+    onUpdate(card.id, { days, streak });
   }
 
   const nDue = dueToday.length + overdue.length;
