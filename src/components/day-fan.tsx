@@ -10,11 +10,13 @@ export function DayFan({
   cards,
   onClose,
   onOpenCard,
+  secondaryAction,
 }: {
   title: string;
   cards: Card[];
   onClose: () => void;
   onOpenCard: (card: Card) => void;
+  secondaryAction?: { label: string; onClick: () => void };
 }) {
   return (
     <div className="overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -35,6 +37,9 @@ export function DayFan({
         </div>
         <div className="fan-foot">
           <span className="hint mono">tap a card to open it</span>
+          {secondaryAction ? (
+            <button className="link-btn" onClick={secondaryAction.onClick}>{secondaryAction.label}</button>
+          ) : null}
         </div>
       </div>
     </div>

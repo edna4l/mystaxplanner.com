@@ -5,7 +5,7 @@
 // the project README's "Not yet ported" list.
 import type { Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
-import { shortISO, money } from "@/lib/date";
+import { shortISO, money, soonestDate, todayISO } from "@/lib/date";
 
 function pct(checklist: Card["checklist"]) {
   if (!checklist || !checklist.length) return 0;
@@ -27,6 +27,7 @@ function Preview({ card }: { card: Card }) {
   }
   if (card.type === "habit") {
     const recent = (card.days || []).slice(-7);
+    const doneThisWeek = recent.filter(Boolean).length;
     return (
       <div className="prev">
         <div className="dots">
@@ -34,7 +35,8 @@ function Preview({ card }: { card: Card }) {
             <span key={i} className={"dot" + (on ? " dot-on" : "")} />
           ))}
         </div>
-        <span className="prev-sub"><b className="mono">{card.streak || 0}</b> day streak</span>
+        <span className="prev-sub">{doneThisWeek} of {recent.length} days this week</span>
+        <span className="prev-sub">Current streak: <b className="mono">{card.streak || 0}</b> days</span>
       </div>
     );
   }
@@ -131,6 +133,8 @@ export function StackTile({
   const T = typeMeta(top.type);
   const layers = Math.min(cards.length, 3);
   const cover = top.cover;
+  const soonest = soonestDate(cards.map((c) => c.date));
+  const soonestLabel = soonest ? (soonest >= todayISO() ? "Next: " : "Last: ") + shortISO(soonest) : null;
   return (
     <div className={"stack-tile" + (dim ? " card-dim" : "") + (settle ? " settling" : "")} {...dragProps}>
       {Array.from({ length: layers - 1 }).map((_, i) => (
@@ -152,6 +156,7 @@ export function StackTile({
         </div>
         <h3 className="card-title">{slotName || top.title}</h3>
         <div className="stack-meta">
+          {soonestLabel ? <span className="prev-sub">{soonestLabel}</span> : null}
           <div className="stack-chips">
             {cards.slice(0, 5).map((c, i) => (
               <span key={i} className="mini-swatch" style={{ "--hue": typeMeta(c.type).hue } as React.CSSProperties} />

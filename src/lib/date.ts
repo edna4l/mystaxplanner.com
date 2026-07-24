@@ -43,3 +43,14 @@ export function addDaysISO(iso: string, days: number) {
   const d = new Date(p.y, p.m, p.d + days);
   return toISODate(d.getFullYear(), d.getMonth(), d.getDate());
 }
+
+// Earliest upcoming date among a group of cards (for a manually-stacked
+// slot's "Next: ..." summary); falls back to the most recent past date if
+// nothing's upcoming, or null if no card in the group has a date at all.
+export function soonestDate(dates: (string | null | undefined)[], today = todayISO()): string | null {
+  const valid = dates.filter((d): d is string => !!d && !!parseISO(d));
+  if (!valid.length) return null;
+  const upcoming = valid.filter((d) => d >= today).sort();
+  if (upcoming.length) return upcoming[0];
+  return valid.filter((d) => d < today).sort().pop() ?? null;
+}

@@ -26,7 +26,7 @@ import { Toast } from "@/components/toast";
 type Open =
   | { kind: "card"; cardId: string; virtualCard?: Card }
   | { kind: "fan"; slotId: string }
-  | { kind: "dayfan"; label: string; cards: Card[] }
+  | { kind: "dayfan"; label: string; cards: Card[]; secondaryAction?: { label: string; onClick: () => void } }
   | null;
 
 export default function HomeClient() {
@@ -111,7 +111,7 @@ export default function HomeClient() {
   const dayFan = useMemo(() => {
     if (!open || open.kind !== "dayfan") return null;
     const cards = [...open.cards].sort((a, b) => (a.card_order == null ? 9999 : a.card_order) - (b.card_order == null ? 9999 : b.card_order));
-    return { label: open.label, cards };
+    return { label: open.label, cards, secondaryAction: open.secondaryAction };
   }, [open]);
 
   const sectionCards = useMemo(() => {
@@ -299,6 +299,11 @@ export default function HomeClient() {
           onOpenCard={openCardHandler}
           onOpenStack={(s) => setOpen({ kind: "fan", slotId: s.id })}
           onMerge={merge}
+          onOpenBillStack={(cards) => setOpen({
+            kind: "dayfan", label: "Bills", cards,
+            secondaryAction: { label: "Review bills →", onClick: () => { setOpen(null); setView("bills"); } },
+          })}
+          onReviewBills={() => setView("bills")}
         />
       ) : view === "calendar" ? (
         <CalendarView
@@ -362,6 +367,7 @@ export default function HomeClient() {
           cards={dayFan.cards}
           onClose={() => setOpen(null)}
           onOpenCard={openCardHandler}
+          secondaryAction={dayFan.secondaryAction}
         />
       ) : null}
 
