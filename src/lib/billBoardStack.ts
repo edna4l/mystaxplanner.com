@@ -12,8 +12,10 @@ export interface BillGroup {
   rootId: string;
   title: string;
   // Root + materialized children, deduplicated by date — real database
-  // rows, never a synthetic virtual occurrence. This is exactly the
-  // fan's card list.
+  // rows, never a synthetic virtual occurrence. The fan further filters
+  // this down to unpaid ones by default (board-view.tsx) — paid history
+  // is one click away via "Review bills ->" instead of cluttering the
+  // quick-glance fan.
   realCards: Card[];
   // Every real card belonging to this group, including any duplicate
   // dropped from realCards above — used only to decide what to pull out

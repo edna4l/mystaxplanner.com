@@ -124,7 +124,7 @@ export function BoardView({
         <div key="__bills" className="slot wide">
           <BillStackTile
             summary={billSummary}
-            onOpen={() => onOpenBillStack(billSummary.groups.flatMap((g) => g.realCards))}
+            onOpen={() => onOpenBillStack(billSummary.groups.flatMap((g) => g.realCards.filter((c) => !c.paid)))}
             onReviewBills={onReviewBills}
           />
         </div>
