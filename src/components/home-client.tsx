@@ -33,7 +33,7 @@ export default function HomeClient() {
   const {
     board, loading, customTypes, addCard, updateCard, deleteCard, merge, unstack, ungroup,
     stampCard, bulkDeleteBills, bulkMarkBills, applyCardOrder, restoreCards,
-    materializeOccurrence, skipOccurrence, stopRecurrence, splitSeriesFrom,
+    materializeOccurrence, skipOccurrence, unskipOccurrence, stopRecurrence, splitSeriesFrom,
     createCustomType, updateCustomType, deleteCustomType,
   } = useBoard();
   const { profile, loading: profileLoading, updateProfile, updateTweaks } = useProfile();
@@ -46,7 +46,7 @@ export default function HomeClient() {
   const [quickOpen, setQuickOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; cards: Card[] } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; cards: Card[]; skips: { id: string; wasVirtual: boolean }[] } | null>(null);
 
   useEffect(() => {
     if (profile) applyTheme(profile.tweaks);
@@ -91,6 +91,17 @@ export default function HomeClient() {
     board.forEach((s) => s.cards.forEach((c) => { if (c.id === openCard.origin) root = c; }));
     return root && (root as Card).recur_freq ? { isRoot: false as const } : null;
   }, [openCard, board]);
+
+  // Occurrences of the open series root that were previously skipped, so
+  // ExpandedCard can offer a "Restore" action for each — the durable
+  // counterpart to the toast's momentary Undo, for when you notice a
+  // missing bill long after the toast is gone.
+  const openCardSkipped = useMemo(() => {
+    if (!openCard || !openCardSeries?.isRoot) return [];
+    const out: Card[] = [];
+    board.forEach((s) => s.cards.forEach((c) => { if (c.origin === openCard.id && c.skipped) out.push(c); }));
+    return out.sort((a, b) => (a.occurrence_date || a.date || "").localeCompare(b.occurrence_date || b.date || ""));
+  }, [openCard, openCardSeries, board]);
 
   const openSlot = useMemo<BoardSlot | null>(() => {
     if (!open || open.kind !== "fan") return null;
@@ -172,18 +183,22 @@ export default function HomeClient() {
     setSectionType(null);
   }
 
-  function handleDeleteCard() {
+  async function handleDeleteCard() {
     if (!openCard) return;
     if (openCardSeries && !openCardSeries.isRoot) {
-      skipOccurrence(openCard.id);
+      const result = await skipOccurrence(openCard.id);
       setOpen(null);
-      setToast({ msg: "Occurrence skipped", cards: [] });
+      setToast({ msg: "Occurrence skipped", cards: [], skips: result ? [result] : [] });
       return;
     }
     const snapshot = openCard;
     deleteCard(openCard.id);
     setOpen(null);
-    setToast({ msg: "Card deleted", cards: [snapshot] });
+    setToast({ msg: "Card deleted", cards: [snapshot], skips: [] });
+  }
+
+  function handleRestoreOccurrence(id: string) {
+    unskipOccurrence(id, false);
   }
 
   async function handleSplitSeries() {
@@ -218,17 +233,18 @@ export default function HomeClient() {
     return root;
   }
 
-  function handleBulkDeleteBills(ids: string[]) {
+  async function handleBulkDeleteBills(ids: string[]) {
     if (!ids.length) return;
     const skipIds = ids.filter((id) => !!seriesRootOf(id)?.recur_freq);
     const hardIds = ids.filter((id) => !skipIds.includes(id));
-    skipIds.forEach((id) => skipOccurrence(id));
+    const skipResults = await Promise.all(skipIds.map((id) => skipOccurrence(id)));
+    const skips = skipResults.filter((r): r is { id: string; wasVirtual: boolean } => !!r);
     const snapshots: Card[] = [];
     if (hardIds.length) {
       board.forEach((s) => s.cards.forEach((c) => { if (hardIds.includes(c.id)) snapshots.push(c); }));
       bulkDeleteBills(hardIds);
     }
-    setToast({ msg: `${ids.length} bill${ids.length === 1 ? "" : "s"} deleted`, cards: snapshots });
+    setToast({ msg: `${ids.length} bill${ids.length === 1 ? "" : "s"} deleted`, cards: snapshots, skips });
   }
 
   function handleBulkMarkBills(ids: string[], paid: boolean) {
@@ -241,6 +257,7 @@ export default function HomeClient() {
 
   function undoToast() {
     if (toast?.cards.length) restoreCards(toast.cards);
+    if (toast?.skips.length) toast.skips.forEach((s) => unskipOccurrence(s.id, s.wasVirtual));
     setToast(null);
   }
 
@@ -324,6 +341,8 @@ export default function HomeClient() {
           series={openCardSeries}
           onSplitSeries={handleSplitSeries}
           onStopRecurrence={handleStopRecurrence}
+          skipped={openCardSkipped}
+          onRestoreOccurrence={handleRestoreOccurrence}
         />
       ) : null}
 
@@ -384,8 +403,8 @@ export default function HomeClient() {
       {toast ? (
         <Toast
           msg={toast.msg}
-          actionLabel={toast.cards.length ? "Undo" : undefined}
-          onAction={toast.cards.length ? undoToast : undefined}
+          actionLabel={toast.cards.length || toast.skips.length ? "Undo" : undefined}
+          onAction={toast.cards.length || toast.skips.length ? undoToast : undefined}
           onDismiss={() => setToast(null)}
         />
       ) : null}

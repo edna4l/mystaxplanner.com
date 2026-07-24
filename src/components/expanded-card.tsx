@@ -208,6 +208,8 @@ export function ExpandedCard({
   series,
   onSplitSeries,
   onStopRecurrence,
+  skipped,
+  onRestoreOccurrence,
 }: {
   card: Card;
   onClose: () => void;
@@ -216,6 +218,8 @@ export function ExpandedCard({
   series?: { isRoot: boolean } | null;
   onSplitSeries?: () => void;
   onStopRecurrence?: () => void;
+  skipped?: Card[];
+  onRestoreOccurrence?: (id: string) => void;
 }) {
   const T = typeMeta(card.type);
   return (
@@ -242,6 +246,17 @@ export function ExpandedCard({
               <button className="link-btn" onClick={onSplitSeries}>Change this and future occurrences…</button>
             ) : null}
             <button className="link-btn" onClick={onStopRecurrence}>Stop repeating after this</button>
+          </div>
+        ) : null}
+        {series?.isRoot && skipped && skipped.length > 0 ? (
+          <div className="skipped-list">
+            <span className="field-label">Skipped occurrences</span>
+            {skipped.map((s) => (
+              <div className="skipped-row" key={s.id}>
+                <span>{s.due || s.occurrence_date || s.date}</span>
+                <button className="link-btn" onClick={() => onRestoreOccurrence?.(s.id)}>Restore</button>
+              </div>
+            ))}
           </div>
         ) : null}
       </div>

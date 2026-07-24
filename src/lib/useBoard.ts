@@ -169,13 +169,37 @@ export function useBoard() {
   // materialized with skipped:true; already-materialized exception rows are
   // just flagged in place (a plain delete would remove the divergence and
   // let the rule regenerate a virtual occurrence for that date instead).
-  async function skipOccurrence(id: string) {
+  // Returns how the skip was applied, so a caller can undo it correctly:
+  // a virtual occurrence gets a brand-new row (wasVirtual: true) that undo
+  // should delete outright to fall back to a normal virtual occurrence
+  // again; an already-materialized row just gets flagged (wasVirtual:
+  // false) and undo should simply clear the flag, preserving whatever
+  // that row's own values already were.
+  async function skipOccurrence(id: string): Promise<{ id: string; wasVirtual: boolean } | null> {
     if (isVirtualId(id)) {
-      await materializeOccurrence(id, { skipped: true });
-      return;
+      const card = await materializeOccurrence(id, { skipped: true });
+      return card ? { id: card.id, wasVirtual: true } : null;
     }
     setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (c.id === id ? { ...c, skipped: true } : c)) })));
     await supabase.from("cards").update({ skipped: true }).eq("id", id);
+    return { id, wasVirtual: false };
+  }
+
+  // Reverses skipOccurrence. For a row that was materialized purely to
+  // record the skip, deletes it outright (falling back to a generated
+  // virtual occurrence again, so it stays in sync with the series going
+  // forward); for a row that already existed, just clears the flag.
+  async function unskipOccurrence(id: string, wasVirtual: boolean) {
+    if (wasVirtual) {
+      let slotId: string | null = null;
+      board.forEach((s) => s.cards.forEach((c) => { if (c.id === id) slotId = c.slot_id; }));
+      setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.filter((c) => c.id !== id) })).filter((s) => s.cards.length > 0));
+      await supabase.from("cards").delete().eq("id", id);
+      if (slotId) await supabase.from("slots").delete().eq("id", slotId);
+      return;
+    }
+    setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (c.id === id ? { ...c, skipped: false } : c)) })));
+    await supabase.from("cards").update({ skipped: false }).eq("id", id);
   }
 
   // Ends a series so nothing generates after the given occurrence — the
@@ -533,7 +557,7 @@ export function useBoard() {
   return {
     board, loading, userId, customTypes, reload, addCard, updateCard, deleteCard, merge, unstack, ungroup, renameSlot,
     stampCard, bulkDeleteBills, bulkMarkBills, applyCardOrder, restoreCards, materializeOccurrence,
-    skipOccurrence, stopRecurrence, splitSeriesFrom,
+    skipOccurrence, unskipOccurrence, stopRecurrence, splitSeriesFrom,
     createCustomType, updateCustomType, deleteCustomType,
   };
 }

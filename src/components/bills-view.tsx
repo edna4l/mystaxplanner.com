@@ -44,6 +44,21 @@ function isDueSoon(b: Card) {
   return diff >= 0 && diff <= 3;
 }
 
+// "Past due" for anything overdue within the current calendar month;
+// "N months past due" once a full calendar month boundary has passed —
+// matches how people actually talk about a bill they've missed.
+function overdueLabel(b: Card): string | null {
+  if (b.paid) return null;
+  const p = parseISO(b.date);
+  if (!p) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(p.y, p.m, p.d);
+  if (d >= today) return null;
+  const months = (today.getFullYear() - p.y) * 12 + (today.getMonth() - p.m);
+  return months <= 0 ? "Past due" : `${months} month${months === 1 ? "" : "s"} past due`;
+}
+
 function cmpBy(key: SortKey): (a: Card, b: Card) => number {
   if (key === "amount") return (a, b) => Number(b.amount || 0) - Number(a.amount || 0);
   if (key === "amount-asc") return (a, b) => Number(a.amount || 0) - Number(b.amount || 0);
@@ -80,8 +95,9 @@ function BillsRow({
 }) {
   const remaining = remainingDue(b);
   const soon = isDueSoon(b);
+  const overdue = overdueLabel(b);
   return (
-    <div className={"brow" + (soon ? " brow-soon" : "")} style={{ "--hue": typeMeta("bill").hue } as React.CSSProperties}>
+    <div className={"brow" + (soon ? " brow-soon" : "") + (overdue ? " brow-overdue" : "")} style={{ "--hue": typeMeta("bill").hue } as React.CSSProperties}>
       <button
         className={"paydot" + (b.paid ? " on" : "")}
         title={b.paid ? "Paid" : "Mark paid"}
@@ -92,7 +108,7 @@ function BillsRow({
         {b.title}
         {b.last4 ? <span className="mono tiny" style={{ marginLeft: 6, color: "var(--muted)" }}>•••• {b.last4}</span> : null}
         {b.autopay ? <span className="brow-soon-badge" style={{ color: "oklch(0.5 0.12 150)", background: "oklch(0.94 0.05 150)" }}>Autopay</span> : null}
-        {soon ? <span className="brow-soon-badge">Due soon</span> : null}
+        {overdue ? <span className="brow-soon-badge" style={{ color: "oklch(0.55 0.16 25)", background: "oklch(0.95 0.05 25)" }}>{overdue}</span> : soon ? <span className="brow-soon-badge">Due soon</span> : null}
       </span>
       {hideCat ? <span /> : <span className="brow-cat">{b.category || "—"}</span>}
       <span className="brow-note">{b.notes || "—"}</span>
