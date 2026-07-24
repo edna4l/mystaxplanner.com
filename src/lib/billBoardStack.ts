@@ -95,10 +95,15 @@ export function summarizeBillsForBoard(board: BoardSlot[], today = todayISO()): 
     // the more recently-touched, more complete record for that date.
     const exceptionDates = new Set(exceptions.map((e) => e.occurrence_date || e.date).filter(Boolean));
     const rootIsDuplicated = !!root.date && exceptionDates.has(root.date);
+    // "Deleting" a recurring occurrence (skipOccurrence, useBoard.ts)
+    // doesn't remove the row — it flags it skipped so the rule doesn't
+    // regenerate it. The fan needs to honor that flag too, or a
+    // "deleted" occurrence just keeps showing up here.
+    const visibleExceptions = exceptions.filter((e) => !e.skipped);
     groups.push({
       rootId: root.id,
       title: root.title,
-      realCards: [...(rootIsDuplicated ? [] : [root]), ...exceptions]
+      realCards: [...(rootIsDuplicated ? [] : [root]), ...visibleExceptions]
         .sort((a, b) => (a.occurrence_date || a.date || "").localeCompare(b.occurrence_date || b.date || "")),
       allCardIds: [root, ...exceptions].map((c) => c.id),
       nextDue: nextDueFor(root, exceptions, today),
