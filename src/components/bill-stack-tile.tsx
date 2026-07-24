@@ -24,15 +24,15 @@ export function BillStackTile({
       <div className="card-top">
         <span className="type-tag"><span className="swatch" />Bills</span>
       </div>
-      <h3 className="card-title">{money(summary.totalDueSoon)} due soon</h3>
+      <h3 className="card-title bill-stack-headline">{money(summary.totalDueSoon)} due soon</h3>
       <div className="prev">
         <span className="prev-sub">
           {summary.billCount} bill{summary.billCount === 1 ? "" : "s"}
           {summary.overdueCount ? ` • ${summary.overdueCount} overdue` : ""}
         </span>
-        {summary.lines.map((l, i) => (
+        {summary.lines.slice(0, 2).map((l, i) => (
           <div className="prev-row between" key={i}>
-            <span className="prev-sub">{l.title}</span>
+            <span className="prev-sub bill-stack-line-title">{l.title}</span>
             <span className={"mono tiny" + (l.overdue ? " bill-stack-overdue" : "")}>{money(l.amount)}</span>
           </div>
         ))}
