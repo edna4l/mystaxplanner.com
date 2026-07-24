@@ -2,11 +2,16 @@
 
 // Ported from app.jsx's board grid + dragPropsFor (drag-to-stack).
 // Restructured into named sections: Today at a glance, Needs attention,
-// Your stacks (anything recurring/grouped — bills, custom-type groups,
-// manual stacks, habits, projects), and Notes & one-time items
-// (everything else). Same sort options as the Bills page (bills-view.tsx).
+// a view switch (Stacks/Cards/Timeline), and the board itself. "Stacks"
+// groups anything recurring/grouped (bills, custom-type groups, manual
+// stacks, habits, projects) under "Your stacks" with everything else
+// under "Notes & one-time items"; "Cards" is a flat grid of every real
+// card with no grouping at all; "Timeline" is the same grouped tiles as
+// Stacks, laid out chronologically by month instead of by category.
+// Same sort options as the Bills page (bills-view.tsx).
 import { useMemo, useState } from "react";
 import type { BoardSlot, Card } from "@/lib/types";
+import type { Tweaks } from "@/lib/theme";
 import { SquareCard, StackTile } from "@/components/square-card";
 import { BillStackTile } from "@/components/bill-stack-tile";
 import { summarizeBillsForBoard } from "@/lib/billBoardStack";
@@ -18,6 +23,8 @@ import { TodayGlance } from "@/components/today-glance";
 import { NeedsAttention } from "@/components/needs-attention";
 
 type SortKey = "date" | "amount" | "amount-asc" | "name" | "name-desc" | "category";
+type BoardMode = Tweaks["boardView"];
+const BOARD_MODES: BoardMode[] = ["Stacks", "Cards", "Timeline"];
 
 interface SortableTile {
   key: string;
@@ -37,6 +44,12 @@ function cmpBy(key: SortKey): (a: SortableTile, b: SortableTile) => number {
   return (a, b) => (a.date || "~").localeCompare(b.date || "~");
 }
 
+function monthLabel(dateKey: string): string {
+  if (dateKey === "undated") return "No date";
+  const [y, m] = dateKey.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+}
+
 export function BoardView({
   board,
   onOpenCard,
@@ -45,6 +58,8 @@ export function BoardView({
   onOpenBillStack,
   onReviewBills,
   onOpenCardGroup,
+  boardView,
+  onChangeBoardView,
 }: {
   board: BoardSlot[];
   onOpenCard: (card: Card, rect: DOMRect | null) => void;
@@ -53,6 +68,8 @@ export function BoardView({
   onOpenBillStack: (cards: Card[]) => void;
   onReviewBills: () => void;
   onOpenCardGroup: (label: string, cards: Card[]) => void;
+  boardView: BoardMode;
+  onChangeBoardView: (mode: BoardMode) => void;
 }) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -172,15 +189,69 @@ export function BoardView({
     else noteSlots.push(tile);
   });
 
+  // Cards mode bypasses every grouping above — literally one tile per
+  // real card, the pre-stacking flat grid.
+  const flatTiles: SortableTile[] = [];
+  if (boardView === "Cards") {
+    board.forEach((s) => {
+      s.cards.forEach((c) => {
+        flatTiles.push({
+          key: c.id,
+          title: c.title,
+          date: c.date,
+          amount: c.type === "bill" ? c.amount : null,
+          category: c.category,
+          node: (
+            <div key={c.id} className="slot">
+              <SquareCard card={c} onOpen={(e) => onOpenCard(c, e.currentTarget.getBoundingClientRect())} />
+            </div>
+          ),
+        });
+      });
+    });
+  }
+
   const sortedStacks = [...stackSlots].sort(cmpBy(sortBy));
   const sortedNotes = [...noteSlots].sort(cmpBy(sortBy));
+  const sortedFlat = [...flatTiles].sort(cmpBy(sortBy));
+
+  // Timeline reuses the same grouped tiles as Stacks (so it doesn't
+  // re-flood the board with e.g. every individual bill history row) but
+  // lays them out chronologically by month instead of by category. Not
+  // memoized — stackSlots/noteSlots above are freshly rebuilt every
+  // render already, so there's nothing to gain by memoizing this too,
+  // and useMemo can't be called this late anyway (it'd run after the
+  // `!board.length` early return above on some renders but not others,
+  // which breaks the Rules of Hooks).
+  let monthGroups: { key: string; label: string; tiles: SortableTile[] }[] = [];
+  if (boardView === "Timeline") {
+    const byMonth = new Map<string, SortableTile[]>();
+    [...stackSlots, ...noteSlots].forEach((t) => {
+      const key = t.date ? t.date.slice(0, 7) : "undated";
+      const arr = byMonth.get(key) ?? [];
+      arr.push(t);
+      byMonth.set(key, arr);
+    });
+    monthGroups = Array.from(byMonth.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, tiles]) => ({ key, label: monthLabel(key), tiles: tiles.sort(cmpBy("date")) }));
+  }
+
+  const hasAnyTiles = boardView === "Cards" ? sortedFlat.length > 0 : stackSlots.length > 0 || noteSlots.length > 0;
 
   return (
     <>
       <TodayGlance summary={todaySummary} onOpenCard={onOpenCard} />
       <NeedsAttention summary={todaySummary} onOpenCard={onOpenCard} onOpenCategory={onOpenCardGroup} />
-      {stackSlots.length || noteSlots.length ? (
-        <div className="board-sort-row">
+      <div className="board-sort-row">
+        <div className="view-switch">
+          {BOARD_MODES.map((m) => (
+            <button key={m} className={"view-switch-b" + (boardView === m ? " on" : "")} onClick={() => onChangeBoardView(m)}>
+              {m}
+            </button>
+          ))}
+        </div>
+        {hasAnyTiles && boardView !== "Timeline" ? (
           <select className="bsort" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} title="Sort board">
             <option value="date">Sort: Date</option>
             <option value="amount">Sort: Amount (high→low)</option>
@@ -189,20 +260,42 @@ export function BoardView({
             <option value="name-desc">Sort: Z→A</option>
             <option value="category">Sort: Category</option>
           </select>
-        </div>
-      ) : null}
-      {sortedStacks.length ? (
+        ) : null}
+      </div>
+
+      {boardView === "Cards" ? (
+        sortedFlat.length ? (
+          <main className="board">{sortedFlat.map((t) => t.node)}</main>
+        ) : (
+          <div className="section-empty">No cards yet.</div>
+        )
+      ) : boardView === "Timeline" ? (
+        monthGroups.length ? (
+          monthGroups.map((g) => (
+            <div key={g.key}>
+              <span className="section-label board-section-label">{g.label}</span>
+              <main className="board">{g.tiles.map((t) => t.node)}</main>
+            </div>
+          ))
+        ) : (
+          <div className="section-empty">No cards yet.</div>
+        )
+      ) : (
         <>
-          <span className="section-label board-section-label">Your stacks</span>
-          <main className="board">{sortedStacks.map((t) => t.node)}</main>
+          {sortedStacks.length ? (
+            <>
+              <span className="section-label board-section-label">Your stacks</span>
+              <main className="board">{sortedStacks.map((t) => t.node)}</main>
+            </>
+          ) : null}
+          {sortedNotes.length ? (
+            <>
+              <span className="section-label board-section-label">Notes &amp; one-time items</span>
+              <main className="board">{sortedNotes.map((t) => t.node)}</main>
+            </>
+          ) : null}
         </>
-      ) : null}
-      {sortedNotes.length ? (
-        <>
-          <span className="section-label board-section-label">Notes &amp; one-time items</span>
-          <main className="board">{sortedNotes.map((t) => t.node)}</main>
-        </>
-      ) : null}
+      )}
     </>
   );
 }

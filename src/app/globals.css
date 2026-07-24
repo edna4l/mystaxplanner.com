@@ -590,7 +590,10 @@ input, textarea { font-family: inherit; }
   letter-spacing: 0.08em; color: var(--muted); padding: 0 clamp(20px, 5vw, 64px);
 }
 .board-section-label { margin: 18px 0 -6px; }
-.board-sort-row { display: flex; justify-content: flex-end; padding: 4px clamp(20px, 5vw, 64px) 0; }
+.board-sort-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px clamp(20px, 5vw, 64px) 0; flex-wrap: wrap; }
+.view-switch { display: inline-flex; background: color-mix(in oklab, var(--ink) 7%, var(--bg)); border-radius: 999px; padding: 3px; gap: 2px; }
+.view-switch-b { border: none; background: transparent; color: var(--muted); font-weight: 600; font-size: 13px; padding: 7px 15px; border-radius: 999px; cursor: pointer; transition: all .15s ease; }
+.view-switch-b.on { background: var(--panel); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
 .glance { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 16px clamp(20px, 5vw, 64px) 2px; }
 .glance-chip {
   background: var(--panel); border: 1px solid var(--line); color: var(--ink);

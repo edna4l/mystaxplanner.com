@@ -309,6 +309,8 @@ export default function HomeClient() {
           })}
           onReviewBills={() => setView("bills")}
           onOpenCardGroup={(label, cards) => setOpen({ kind: "dayfan", label, cards })}
+          boardView={profile?.tweaks.boardView ?? "Stacks"}
+          onChangeBoardView={(v) => updateTweaks({ boardView: v })}
         />
       ) : view === "calendar" ? (
         <CalendarView

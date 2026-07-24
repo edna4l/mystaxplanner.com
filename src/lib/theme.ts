@@ -26,6 +26,9 @@ export interface Tweaks {
   // hue, set/edited via the type registry — see cardTypes.ts). Keyed by
   // BuiltinType; absent key means "use the default for that type."
   typeHues: Partial<Record<string, number>>;
+  // Board layout mode — see board-view.tsx. Persisted like any other
+  // display preference rather than reset every session.
+  boardView: "Stacks" | "Cards" | "Timeline";
 }
 
 export const TWEAK_DEFAULTS: Tweaks = {
@@ -40,6 +43,7 @@ export const TWEAK_DEFAULTS: Tweaks = {
   expandStyle: "Grow",
   fontPair: "Friendly",
   typeHues: {},
+  boardView: "Stacks",
 };
 
 const PALETTE = {
