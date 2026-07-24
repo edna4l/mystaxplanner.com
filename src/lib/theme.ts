@@ -9,6 +9,13 @@ export interface Tweaks {
   appearance: "Light" | "Dark";
   palette: "Soft" | "Default" | "Vivid" | "Mono";
   cardStyle: "Paper" | "Flat" | "Outline";
+  // "Gradient" is opt-in — a soft per-hue gradient + glow on a few
+  // specific states (drag targets, hovered stacks) instead of a flat
+  // tint. Derived purely from the existing --hue/--chroma/--tint-L
+  // tokens, so it automatically respects whatever accent/type-color
+  // customization (including the color wheel) is already set, rather
+  // than being a separate hardcoded palette.
+  cardVariant: "Flat" | "Gradient";
   bgTone: "Warm" | "Cool" | "Neutral";
   radius: number;
   density: "Compact" | "Regular" | "Comfy";
@@ -25,6 +32,7 @@ export const TWEAK_DEFAULTS: Tweaks = {
   appearance: "Light",
   palette: "Default",
   cardStyle: "Paper",
+  cardVariant: "Flat",
   bgTone: "Warm",
   radius: 18,
   density: "Regular",
@@ -76,6 +84,7 @@ export function applyTheme(t: Tweaks) {
   r.style.setProperty("--font-display", f.disp);
   r.style.setProperty("--font-ui", f.ui);
   r.setAttribute("data-cardstyle", (t.cardStyle || "Paper").toLowerCase());
+  r.setAttribute("data-cardvariant", (t.cardVariant || "Flat").toLowerCase());
   const dark = t.appearance === "Dark";
   r.setAttribute("data-appearance", dark ? "dark" : "light");
   if (dark) {

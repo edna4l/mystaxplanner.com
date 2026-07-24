@@ -40,6 +40,25 @@ export function AccentRow({ value, onPick }: { value: number | null | undefined;
   );
 }
 
+const HUE_WHEEL_TRACK = `linear-gradient(to right, ${Array.from({ length: 13 }, (_, i) => `oklch(0.62 0.16 ${i * 30})`).join(", ")})`;
+
+// A free-form hue slider alongside the preset swatches above — presets
+// cover the common cases quickly, this covers "none of those, I want
+// exactly this color."
+export function HueWheel({ value, onChange }: { value: number; onChange: (hue: number) => void }) {
+  return (
+    <input
+      type="range"
+      className="hue-wheel"
+      min={0}
+      max={360}
+      value={value}
+      style={{ background: HUE_WHEEL_TRACK }}
+      onChange={(e) => onChange(Number(e.target.value))}
+    />
+  );
+}
+
 function Seg<T extends string>({ value, options, onChange }: { value: T; options: T[]; onChange: (v: T) => void }) {
   return (
     <div className="seg">
@@ -95,6 +114,7 @@ export function SettingsModal({
         <div className="ob-section">
           <span className="ob-label">Accent color</span>
           <AccentRow value={profile.accent} onPick={pickAccent} />
+          <HueWheel value={profile.accent ?? 0} onChange={pickAccent} />
         </div>
         <div className="ob-section">
           <span className="ob-label">Card colors</span>
@@ -102,13 +122,24 @@ export function SettingsModal({
             {Object.values(BUILTIN_CARD_TYPES).map((def) => (
               <div className="type-color-row" key={def.key}>
                 <span className="type-color-label">{def.label}</span>
-                <AccentRow
-                  value={t.typeHues[def.key] ?? def.hue}
-                  onPick={(hue) => onSaveTweaks({ typeHues: { ...t.typeHues, [def.key]: hue } })}
-                />
+                <div className="type-color-pickers">
+                  <AccentRow
+                    value={t.typeHues[def.key] ?? def.hue}
+                    onPick={(hue) => onSaveTweaks({ typeHues: { ...t.typeHues, [def.key]: hue } })}
+                  />
+                  <HueWheel
+                    value={t.typeHues[def.key] ?? def.hue}
+                    onChange={(hue) => onSaveTweaks({ typeHues: { ...t.typeHues, [def.key]: hue } })}
+                  />
+                </div>
               </div>
             ))}
           </div>
+        </div>
+        <div className="ob-section">
+          <span className="ob-label">Card look</span>
+          <Seg value={t.cardVariant} options={["Flat", "Gradient"]} onChange={(v) => onSaveTweaks({ cardVariant: v })} />
+          <span className="ob-hint">Gradient adds a soft depth gradient to every card and a subtle glow on drag targets and hovered stacks, using whatever colors are set above — leave on Flat to keep the current look.</span>
         </div>
 
         <div className="ob-section">

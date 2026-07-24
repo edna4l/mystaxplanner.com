@@ -23,6 +23,11 @@
   --accent: oklch(var(--accent-L) var(--chroma) var(--hue));
   --accent-ink: oklch(var(--accent-ink-L, 0.43) calc(var(--chroma) * 0.95) var(--hue));
   --tint-line: oklch(calc(var(--tint-L) - 0.09) calc(var(--chroma) * 0.7) var(--hue));
+  /* Deeper, more saturated version of the same hue — the second stop
+     for the optional gradient card variant below. Derived from the
+     same tokens so it always matches whatever hue is set, per-type or
+     custom. */
+  --tint-deep: oklch(calc(var(--tint-L) - 0.16) calc(var(--chroma) * 1.7) var(--hue));
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
@@ -114,6 +119,24 @@ input, textarea { font-family: inherit; }
 .type-color-label { font-size: 13px; font-weight: 600; color: var(--ink); width: 64px; flex: none; }
 .type-color-row .accent-row { gap: 7px; }
 .type-color-row .accent-sw { width: 22px; height: 22px; }
+.type-color-pickers { display: flex; align-items: center; gap: 14px; flex: 1; flex-wrap: wrap; }
+.type-color-pickers .hue-wheel { width: 100px; }
+
+/* free-form hue slider */
+.hue-wheel {
+  -webkit-appearance: none; appearance: none; width: 220px; height: 14px;
+  border-radius: 999px; cursor: pointer; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line);
+}
+.hue-wheel::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--panel); border: 2px solid var(--ink); cursor: pointer;
+}
+.hue-wheel::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--panel); border: 2px solid var(--ink); cursor: pointer;
+}
+.hue-wheel::-moz-range-track { height: 14px; border-radius: 999px; }
+
+.ob-hint { font-size: 12px; color: var(--muted); line-height: 1.5; }
 
 /* appearance / profile popover */
 .ap-overlay { padding-top: 12vh; align-items: start; }
@@ -601,6 +624,7 @@ input, textarea { font-family: inherit; }
   content: ""; position: absolute; inset: -7px; border-radius: calc(var(--radius) + 6px);
   border: 2px dashed oklch(0.6 0.13 250); pointer-events: none;
 }
+[data-cardvariant="gradient"] .slot.over::after { box-shadow: 0 0 26px -2px oklch(0.6 0.2 250 / 60%); }
 
 /* ---------- card ---------- */
 .swatch { width: 11px; height: 11px; border-radius: 3px; background: var(--accent); display: inline-block; flex: none; }
@@ -615,6 +639,10 @@ input, textarea { font-family: inherit; }
 [data-cardstyle="paper"] .card { box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 6px 16px -8px rgba(0,0,0,.16); }
 [data-cardstyle="flat"] .card { border: none; box-shadow: none; }
 [data-cardstyle="outline"] .card { background: var(--panel); border: 1.5px solid color-mix(in oklab, var(--accent) 55%, var(--panel)); box-shadow: none; }
+[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .card,
+[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .stack-front {
+  background: linear-gradient(152deg, var(--tint) 0%, var(--tint-deep) 100%);
+}
 .card:hover { transform: translateY(-3px); }
 [data-cardstyle="paper"] .card:hover { box-shadow: 0 2px 4px rgba(0,0,0,.06), 0 14px 28px -10px rgba(0,0,0,.24); }
 .card-dim { opacity: 0.32; filter: saturate(0.6); }
@@ -686,6 +714,9 @@ input, textarea { font-family: inherit; }
   .stack-layer { transition: transform .18s cubic-bezier(.2,.8,.2,1); }
   .stack-tile:hover .stack-layer { transform: translate(calc(var(--i) * 17px), calc(var(--i) * 17px)) scale(calc(1 - var(--i) * 0.04)); }
   .stack-tile:hover .stack-front { transform: translateY(-6px); }
+}
+[data-cardvariant="gradient"] .stack-tile:hover .stack-front {
+  box-shadow: 0 0 28px -4px oklch(var(--accent-L) var(--chroma) var(--hue) / 55%);
 }
 @keyframes stackSettle {
   0% { transform: translateY(-14px) scale(1.05); }
