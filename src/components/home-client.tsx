@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useBoard } from "@/lib/useBoard";
 import { useProfile } from "@/lib/useProfile";
 import type { BoardSlot, Card, Profile } from "@/lib/types";
@@ -8,6 +8,7 @@ import type { ParsedQuickAdd } from "@/lib/quickAdd";
 import { isVirtualId, parseVirtualId } from "@/lib/recurrence";
 import { applyTheme, applyBrand, applyTypeHues } from "@/lib/theme";
 import { computeTodaySummary } from "@/lib/todaySummary";
+import { todayISO } from "@/lib/date";
 import { Topbar, type AppView } from "@/components/topbar";
 import { BoardView } from "@/components/board-view";
 import { TodayView } from "@/components/today-view";
@@ -24,6 +25,7 @@ import { Onboarding } from "@/components/onboarding";
 import { SettingsModal } from "@/components/settings-modal";
 import { Toast } from "@/components/toast";
 import { FocusDeck } from "@/components/focus-deck";
+import { DailyReset } from "@/components/daily-reset";
 
 type Open =
   | { kind: "card"; cardId: string; virtualCard?: Card }
@@ -53,6 +55,22 @@ export default function HomeClient() {
   // card advances the deck deterministically instead of the queue
   // reshuffling under the user as the board updates mid-flow.
   const [focusQueue, setFocusQueue] = useState<Card[] | null>(null);
+  const [dailyResetOpen, setDailyResetOpen] = useState(false);
+  // "N of M done today" needs *some* baseline, but there's no persisted
+  // completion history (by design — see the Phase 5 plan). This
+  // captures how many things were due the first time the board loads
+  // each session, so Daily Reset can compare against it; it resets on
+  // page reload rather than truly tracking the calendar day, which is
+  // an accepted tradeoff for not adding a new database column.
+  const dailyBaselineRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (dailyBaselineRef.current == null && board.length > 0) {
+      const summary = computeTodaySummary(board);
+      const ids = new Set<string>();
+      [...summary.overdue, ...summary.dueToday, ...summary.habitsRisk].forEach((c) => ids.add(c.id));
+      dailyBaselineRef.current = ids.size;
+    }
+  }, [board]);
 
   useEffect(() => {
     if (profile) applyTheme(profile.tweaks);
@@ -222,15 +240,27 @@ export default function HomeClient() {
     stopRecurrence(openCard.id);
   }
 
-  function startFocusDeck() {
+  function todayQueue(): Card[] {
     const summary = computeTodaySummary(board);
     const seen = new Set<string>();
-    const queue = [...summary.overdue, ...summary.dueToday, ...summary.habitsRisk].filter((c) => {
+    return [...summary.overdue, ...summary.dueToday, ...summary.habitsRisk].filter((c) => {
       if (seen.has(c.id)) return false;
       seen.add(c.id);
       return true;
     });
-    setFocusQueue(queue);
+  }
+
+  function startFocusDeck() {
+    setFocusQueue(todayQueue());
+  }
+
+  // Same skip-vs-hard-delete routing bulk delete already uses (Bills
+  // list, handleBulkDeleteBills below) — a recurring occurrence gets
+  // skipped so the rule doesn't regenerate it; anything else is a real
+  // delete.
+  function handleDeleteOrSkipCard(card: Card) {
+    if (seriesRootOf(card.id)?.recur_freq) skipOccurrence(card.id);
+    else deleteCard(card.id);
   }
 
   // A recurring occurrence (virtual, or a materialized child of a root
@@ -314,6 +344,7 @@ export default function HomeClient() {
           onUpdate={handleUpdateCard}
           onGo={() => setView("board")}
           onStartFocusDeck={startFocusDeck}
+          onOpenDailyReset={() => setDailyResetOpen(true)}
         />
       ) : view === "board" ? (
         <BoardView
@@ -444,6 +475,17 @@ export default function HomeClient() {
 
       {focusQueue ? (
         <FocusDeck queue={focusQueue} onUpdate={handleUpdateCard} onClose={() => setFocusQueue(null)} />
+      ) : null}
+
+      {dailyResetOpen ? (
+        <DailyReset
+          total={Math.max(dailyBaselineRef.current ?? 0, todayQueue().length)}
+          unfinished={todayQueue()}
+          onOpenCard={(c) => { setDailyResetOpen(false); openCardHandler(c); }}
+          onMoveToTomorrow={(c) => handleUpdateCard(c.id, { date: todayISO(1) })}
+          onDelete={handleDeleteOrSkipCard}
+          onClose={() => setDailyResetOpen(false)}
+        />
       ) : null}
     </div>
   );
