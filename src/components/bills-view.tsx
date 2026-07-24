@@ -254,7 +254,11 @@ function BillsTrend({ allBills, vy, vm }: { allBills: Card[]; vy: number; vm: nu
     while (m < 0) { m += 12; y -= 1; }
     months.push({ y, m });
   }
-  const totals = months.map(({ y, m }) => allBills.reduce((a, b) => {
+  const rangeStart = toISODate(months[0].y, months[0].m, 1);
+  const last = months[months.length - 1];
+  const rangeEnd = toISODate(last.y, last.m, new Date(last.y, last.m + 1, 0).getDate());
+  const expanded = useMemo(() => expandRecurringBills(allBills, rangeStart, rangeEnd), [allBills, rangeStart, rangeEnd]);
+  const totals = months.map(({ y, m }) => expanded.reduce((a, b) => {
     const p = parseISO(b.date);
     return p && p.y === y && p.m === m ? a + Number(b.amount || 0) : a;
   }, 0));
