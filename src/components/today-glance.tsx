@@ -1,8 +1,9 @@
 "use client";
 
-// Compact "Today at a glance" strip for the top of the Board — reuses
+// "Today at a glance" chip row for the top of the Board — reuses
 // computeTodaySummary (src/lib/todaySummary.ts), the same data TodayView
-// itself is built on, so the two never disagree.
+// itself is built on, so the two never disagree. Each stat renders as
+// its own visual block rather than plain inline text.
 import type { Card } from "@/lib/types";
 import type { TodaySummary } from "@/lib/todaySummary";
 import { money, shortISO } from "@/lib/date";
@@ -19,14 +20,14 @@ export function TodayGlance({
 
   return (
     <div className="glance">
-      <span className="glance-stat">{tasksToday} task{tasksToday === 1 ? "" : "s"} today</span>
-      <span className="glance-stat">{money(summary.weekTotal)} due this week</span>
+      <div className="glance-chip">{tasksToday} task{tasksToday === 1 ? "" : "s"} today</div>
+      <div className="glance-chip">{money(summary.weekTotal)} due this week</div>
       {summary.habits.length ? (
-        <span className="glance-stat">{habitsDone} of {summary.habits.length} habit{summary.habits.length === 1 ? "" : "s"} today</span>
+        <div className="glance-chip">{habitsDone} of {summary.habits.length} habit{summary.habits.length === 1 ? "" : "s"} today</div>
       ) : null}
       {summary.nextAppointment ? (
         <button
-          className="glance-stat glance-link"
+          className="glance-chip glance-link"
           onClick={(e) => onOpenCard(summary.nextAppointment as Card, e.currentTarget.getBoundingClientRect())}
         >
           Next: {summary.nextAppointment.title} · {shortISO(summary.nextAppointment.date)}
