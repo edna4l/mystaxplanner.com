@@ -5,7 +5,7 @@ import { useBoard } from "@/lib/useBoard";
 import { useProfile } from "@/lib/useProfile";
 import type { BoardSlot, Card, Profile } from "@/lib/types";
 import type { ParsedQuickAdd } from "@/lib/quickAdd";
-import { isVirtualId } from "@/lib/recurrence";
+import { isVirtualId, parseVirtualId } from "@/lib/recurrence";
 import { applyTheme, applyBrand } from "@/lib/theme";
 import { Topbar, type AppView } from "@/components/topbar";
 import { BoardView } from "@/components/board-view";
@@ -197,12 +197,46 @@ export default function HomeClient() {
     stopRecurrence(openCard.id);
   }
 
+  // A recurring occurrence (virtual, or a materialized child of a root
+  // that still has recur_freq) can't just be hard-deleted — the generator
+  // would immediately regenerate an equivalent virtual occurrence for that
+  // date, so the row appears to never actually go away. Those route
+  // through skipOccurrence instead; everything else (standalone bills,
+  // series roots) gets a real delete.
+  function seriesRootOf(id: string): Card | null {
+    let rootId: string | null = null;
+    if (isVirtualId(id)) {
+      rootId = parseVirtualId(id)?.rootId ?? null;
+    } else {
+      let card: Card | null = null;
+      board.forEach((s) => s.cards.forEach((c) => { if (c.id === id) card = c; }));
+      rootId = card ? (card as Card).origin : null;
+    }
+    if (!rootId) return null;
+    let root: Card | null = null;
+    board.forEach((s) => s.cards.forEach((c) => { if (c.id === rootId) root = c; }));
+    return root;
+  }
+
   function handleBulkDeleteBills(ids: string[]) {
     if (!ids.length) return;
+    const skipIds = ids.filter((id) => !!seriesRootOf(id)?.recur_freq);
+    const hardIds = ids.filter((id) => !skipIds.includes(id));
+    skipIds.forEach((id) => skipOccurrence(id));
     const snapshots: Card[] = [];
-    board.forEach((s) => s.cards.forEach((c) => { if (ids.includes(c.id)) snapshots.push(c); }));
-    bulkDeleteBills(ids);
+    if (hardIds.length) {
+      board.forEach((s) => s.cards.forEach((c) => { if (hardIds.includes(c.id)) snapshots.push(c); }));
+      bulkDeleteBills(hardIds);
+    }
     setToast({ msg: `${ids.length} bill${ids.length === 1 ? "" : "s"} deleted`, cards: snapshots });
+  }
+
+  function handleBulkMarkBills(ids: string[], paid: boolean) {
+    if (!ids.length) return;
+    const virtualIds = ids.filter(isVirtualId);
+    const realIds = ids.filter((id) => !isVirtualId(id));
+    virtualIds.forEach((id) => materializeOccurrence(id, { paid }));
+    if (realIds.length) bulkMarkBills(realIds, paid);
   }
 
   function undoToast() {
@@ -266,7 +300,7 @@ export default function HomeClient() {
           onOpen={openCardHandler}
           onAddBill={() => handleAdd("bill")}
           onBulkDelete={handleBulkDeleteBills}
-          onBulkMark={bulkMarkBills}
+          onBulkMark={handleBulkMarkBills}
         />
       ) : sectionType ? (
         <SectionView
