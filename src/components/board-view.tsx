@@ -49,7 +49,7 @@ export function BoardView({
 
   const groupedCardIds = useMemo(() => {
     const ids = new Set<string>();
-    if (billSummary) billSummary.groups.forEach((g) => g.realCards.forEach((c) => ids.add(c.id)));
+    if (billSummary) billSummary.groups.forEach((g) => g.allCardIds.forEach((id) => ids.add(id)));
     customGroups.forEach((g) => g.cards.forEach((c) => ids.add(c.id)));
     return ids;
   }, [billSummary, customGroups]);

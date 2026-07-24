@@ -659,7 +659,7 @@ input, textarea { font-family: inherit; }
 .stack-layer {
   position: absolute; inset: 0; border-radius: var(--radius);
   background: var(--tint); border: 1px solid var(--tint-line);
-  transform: translate(calc(var(--i) * 5px), calc(var(--i) * 5px)) scale(calc(1 - var(--i) * 0.03));
+  transform: translate(calc(var(--i) * 11px), calc(var(--i) * 11px)) scale(calc(1 - var(--i) * 0.04));
   transform-origin: top left;
   --tint: oklch(var(--tint-L) calc(var(--chroma) * 0.6) var(--hue));
   --tint-line: oklch(calc(var(--tint-L) - 0.09) calc(var(--chroma) * 0.7) var(--hue));
@@ -678,8 +678,8 @@ input, textarea { font-family: inherit; }
   .stack-tile.settling { animation: stackSettle .6s cubic-bezier(.2,1.1,.3,1); }
   .stack-tile.settling .stack-layer { animation: layerSettle .55s cubic-bezier(.2,1.05,.3,1); }
   .stack-layer { transition: transform .18s cubic-bezier(.2,.8,.2,1); }
-  .stack-tile:hover .stack-layer { transform: translate(calc(var(--i) * 8px), calc(var(--i) * 8px)) scale(calc(1 - var(--i) * 0.03)); }
-  .stack-tile:hover .stack-front { transform: translateY(-4px); }
+  .stack-tile:hover .stack-layer { transform: translate(calc(var(--i) * 17px), calc(var(--i) * 17px)) scale(calc(1 - var(--i) * 0.04)); }
+  .stack-tile:hover .stack-front { transform: translateY(-6px); }
 }
 @keyframes stackSettle {
   0% { transform: translateY(-14px) scale(1.05); }

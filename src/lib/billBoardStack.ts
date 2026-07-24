@@ -11,9 +11,15 @@ import { expandRecurringBills } from "@/lib/recurrence";
 export interface BillGroup {
   rootId: string;
   title: string;
-  // Root + materialized children only — real database rows, never a
-  // synthetic virtual occurrence. This is exactly the fan's card list.
+  // Root + materialized children, deduplicated by date — real database
+  // rows, never a synthetic virtual occurrence. This is exactly the
+  // fan's card list.
   realCards: Card[];
+  // Every real card belonging to this group, including any duplicate
+  // dropped from realCards above — used only to decide what to pull out
+  // of the main board grid, so a shadowed duplicate root doesn't
+  // reappear as its own standalone tile once it's excluded from display.
+  allCardIds: string[];
   nextDue: { date: string | null; amount: number; overdue: boolean; dueSoon: boolean } | null;
 }
 
@@ -80,10 +86,19 @@ export function summarizeBillsForBoard(board: BoardSlot[], today = todayISO()): 
   const groups: BillGroup[] = [];
   roots.forEach((root) => {
     const exceptions = childrenByRoot.get(root.id) ?? [];
+    // If an exception already covers the root's own anchor date (e.g. it
+    // got materialized at some point — paid, edited, or split), the root
+    // and that exception represent the same real-world bill twice. Drop
+    // the root from the visible list in favor of the exception, which is
+    // the more recently-touched, more complete record for that date.
+    const exceptionDates = new Set(exceptions.map((e) => e.occurrence_date || e.date).filter(Boolean));
+    const rootIsDuplicated = !!root.date && exceptionDates.has(root.date);
     groups.push({
       rootId: root.id,
       title: root.title,
-      realCards: [root, ...exceptions].sort((a, b) => (a.occurrence_date || a.date || "").localeCompare(b.occurrence_date || b.date || "")),
+      realCards: [...(rootIsDuplicated ? [] : [root]), ...exceptions]
+        .sort((a, b) => (a.occurrence_date || a.date || "").localeCompare(b.occurrence_date || b.date || "")),
+      allCardIds: [root, ...exceptions].map((c) => c.id),
       nextDue: nextDueFor(root, exceptions, today),
     });
   });
@@ -92,6 +107,7 @@ export function summarizeBillsForBoard(board: BoardSlot[], today = todayISO()): 
       rootId: c.id,
       title: c.title,
       realCards: [c],
+      allCardIds: [c.id],
       nextDue: c.paid ? null : { date: c.date, amount: Number(c.amount || 0), overdue: !!overdueLabel(c), dueSoon: isDueSoon(c) },
     });
   });
