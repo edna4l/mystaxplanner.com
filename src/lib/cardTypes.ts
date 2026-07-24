@@ -45,6 +45,9 @@ type NewCardFields = Partial<
     | "recur"
     | "category"
     | "body"
+    | "last4"
+    | "pay_url"
+    | "autopay"
   >
 >;
 
@@ -57,7 +60,7 @@ export function newCardFields(type: string): NewCardFields {
     case "habit":
       return { cadence: "Daily", streak: 0, days: Array(28).fill(false) };
     case "bill":
-      return { amount: 0, due: "", paid: false, recur: "Monthly", category: "", date: null };
+      return { amount: 0, due: "", paid: false, recur: "Monthly", category: "", date: null, last4: "", pay_url: "", autopay: false };
     case "note":
       return { body: "", date: null };
     default:

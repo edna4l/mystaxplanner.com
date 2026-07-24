@@ -155,7 +155,43 @@ export function useBoard() {
     await supabase.from("cards").update(patch).eq("id", cardId);
   }
 
+  // If any of the cards about to be deleted is the root of a recurring
+  // series (origin === null, other cards' origin points at it) and that
+  // series has surviving members outside the delete set, promote the
+  // earliest surviving member to be the new root instead of leaving the
+  // rest of the series pointing at a since-deleted id. Without this, the
+  // FK's `on delete set null` silently ungroups every remaining occurrence
+  // from the series (no crash, but "N copies / Remove all copies" breaks).
+  async function promoteRootsBeforeDelete(idsBeingDeleted: string[]) {
+    const deleteSet = new Set(idsBeingDeleted);
+    const allCards: Card[] = [];
+    board.forEach((s) => s.cards.forEach((c) => allCards.push(c)));
+
+    for (const id of idsBeingDeleted) {
+      const card = allCards.find((c) => c.id === id);
+      if (!card || card.origin) continue; // not a root
+      const siblings = allCards.filter((c) => c.origin === id && !deleteSet.has(c.id));
+      if (!siblings.length) continue;
+      siblings.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
+      const [newRoot, ...others] = siblings;
+
+      await supabase.from("cards").update({ origin: null }).eq("id", newRoot.id);
+      const otherIds = others.map((o) => o.id);
+      if (otherIds.length) await supabase.from("cards").update({ origin: newRoot.id }).in("id", otherIds);
+
+      setBoard((b) => b.map((s) => ({
+        ...s,
+        cards: s.cards.map((c) => {
+          if (c.id === newRoot.id) return { ...c, origin: null };
+          if (otherIds.includes(c.id)) return { ...c, origin: newRoot.id };
+          return c;
+        }),
+      })));
+    }
+  }
+
   async function deleteCard(cardId: string) {
+    await promoteRootsBeforeDelete([cardId]);
     let emptiedSlotId: string | null = null;
     setBoard((b) =>
       b
@@ -346,6 +382,7 @@ export function useBoard() {
 
   async function bulkDeleteBills(ids: string[]) {
     if (!ids.length) return;
+    await promoteRootsBeforeDelete(ids);
     const idSet = new Set(ids);
     const emptiedSlotIds = board.filter((s) => s.cards.every((c) => idSet.has(c.id))).map((s) => s.id);
     setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.filter((c) => !idSet.has(c.id)) })).filter((s) => s.cards.length > 0));

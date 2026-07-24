@@ -7,6 +7,7 @@ import { useState } from "react";
 import type { Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
 import { CoverPicker } from "@/components/cover-picker";
+import { SensitiveWarning } from "@/components/sensitive-warning";
 import * as fx from "@/lib/fx";
 
 function pct(checklist: Card["checklist"]) {
@@ -114,12 +115,28 @@ function ExpandedBody({ card, onUpdate }: { card: Card; onUpdate: (patch: Partia
             <input className="inp" value={card.recur || ""} onChange={(e) => onUpdate({ recur: e.target.value })} />
           </label>
         </div>
+        <label className="field">
+          <span className="field-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input type="checkbox" checked={!!card.autopay} onChange={(e) => onUpdate({ autopay: e.target.checked })} />
+            Autopay enabled
+          </span>
+        </label>
+        <div className="two">
+          <label className="field"><span className="field-label">Last 4 digits (optional)</span>
+            <input className="inp" maxLength={4} inputMode="numeric" placeholder="e.g. 4321"
+              value={card.last4 || ""} onChange={(e) => onUpdate({ last4: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
+          </label>
+          <label className="field"><span className="field-label">Payment website</span>
+            <input className="inp" type="url" placeholder="e.g. chase.com" value={card.pay_url || ""} onChange={(e) => onUpdate({ pay_url: e.target.value })} />
+          </label>
+        </div>
         <label className="field"><span className="field-label">Category</span>
           <input className="inp" value={card.category || ""} onChange={(e) => onUpdate({ category: e.target.value })} />
         </label>
         <label className="field"><span className="field-label">Notes</span>
           <input className="inp" value={card.notes || ""} onChange={(e) => onUpdate({ notes: e.target.value })} />
         </label>
+        <SensitiveWarning text={card.notes} />
         <label className="field"><span className="field-label">Calendar date</span>
           <input className="inp" type="date" value={card.date || ""} onChange={(e) => onUpdate({ date: e.target.value })} />
         </label>
@@ -131,6 +148,7 @@ function ExpandedBody({ card, onUpdate }: { card: Card; onUpdate: (patch: Partia
     return (
       <div className="body">
         <textarea className="inp area tall" value={card.body || ""} placeholder="Write anything…" onChange={(e) => onUpdate({ body: e.target.value })} />
+        <SensitiveWarning text={card.body} />
         <label className="field"><span className="field-label">Calendar date</span>
           <input className="inp" type="date" value={card.date || ""} onChange={(e) => onUpdate({ date: e.target.value })} />
         </label>
@@ -154,6 +172,7 @@ function ExpandedBody({ card, onUpdate }: { card: Card; onUpdate: (patch: Partia
       <label className="field"><span className="field-label">Notes</span>
         <textarea className="inp area" value={card.notes || ""} placeholder="Notes…" onChange={(e) => onUpdate({ notes: e.target.value })} />
       </label>
+      <SensitiveWarning text={card.notes} />
       <label className="field"><span className="field-label">Calendar date</span>
         <input className="inp" type="date" value={card.date || ""} onChange={(e) => onUpdate({ date: e.target.value })} />
       </label>

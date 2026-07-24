@@ -89,6 +89,8 @@ function BillsRow({
       <span className="brow-name" onClick={() => onOpen(b)}>
         {b.cover?.kind === "emoji" ? <span className="brow-emoji">{b.cover.val}</span> : null}
         {b.title}
+        {b.last4 ? <span className="mono tiny" style={{ marginLeft: 6, color: "var(--muted)" }}>•••• {b.last4}</span> : null}
+        {b.autopay ? <span className="brow-soon-badge" style={{ color: "oklch(0.5 0.12 150)", background: "oklch(0.94 0.05 150)" }}>Autopay</span> : null}
         {soon ? <span className="brow-soon-badge">Due soon</span> : null}
       </span>
       {hideCat ? <span /> : <span className="brow-cat">{b.category || "—"}</span>}

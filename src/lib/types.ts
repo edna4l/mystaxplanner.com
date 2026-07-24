@@ -35,6 +35,11 @@ export interface Card {
   recur: string | null;
   category: string | null;
   body: string | null;
+  // Structured, lower-risk bill fields — last4/pay_url/autopay exist so
+  // users don't need to put payment-card/account details in free text.
+  last4: string | null;
+  pay_url: string | null;
+  autopay: boolean | null;
 
   created_at: string;
   updated_at: string;
