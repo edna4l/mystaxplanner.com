@@ -6,7 +6,7 @@ import { useProfile } from "@/lib/useProfile";
 import type { BoardSlot, Card, Profile } from "@/lib/types";
 import type { ParsedQuickAdd } from "@/lib/quickAdd";
 import { isVirtualId, parseVirtualId } from "@/lib/recurrence";
-import { applyTheme, applyBrand } from "@/lib/theme";
+import { applyTheme, applyBrand, applyTypeHues } from "@/lib/theme";
 import { Topbar, type AppView } from "@/components/topbar";
 import { BoardView } from "@/components/board-view";
 import { TodayView } from "@/components/today-view";
@@ -54,6 +54,10 @@ export default function HomeClient() {
 
   useEffect(() => {
     if (profile) applyBrand(profile.accent, profile.tweaks.appearance === "Dark");
+  }, [profile]);
+
+  useEffect(() => {
+    if (profile) applyTypeHues(profile.tweaks.typeHues);
   }, [profile]);
 
   useEffect(() => {

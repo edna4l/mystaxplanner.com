@@ -4,6 +4,7 @@
 // that doesn't exist in production), so instead of porting that shell we
 // apply these same tweaks through a plain settings modal backed by the
 // profiles.tweaks/accent columns.
+import { BUILTIN_CARD_TYPES, CARD_TYPES, registerCardType } from "@/lib/cardTypes";
 export interface Tweaks {
   appearance: "Light" | "Dark";
   palette: "Soft" | "Default" | "Vivid" | "Mono";
@@ -14,6 +15,10 @@ export interface Tweaks {
   showType: boolean;
   expandStyle: "Grow" | "Pop" | "Slide";
   fontPair: "Friendly" | "Modern" | "Classic";
+  // Per-built-in-type hue overrides (custom types already have their own
+  // hue, set/edited via the type registry — see cardTypes.ts). Keyed by
+  // BuiltinType; absent key means "use the default for that type."
+  typeHues: Partial<Record<string, number>>;
 }
 
 export const TWEAK_DEFAULTS: Tweaks = {
@@ -26,6 +31,7 @@ export const TWEAK_DEFAULTS: Tweaks = {
   showType: true,
   expandStyle: "Grow",
   fontPair: "Friendly",
+  typeHues: {},
 };
 
 const PALETTE = {
@@ -84,6 +90,19 @@ export function applyTheme(t: Tweaks) {
   } else {
     r.style.setProperty("--accent-ink-L", "0.43");
   }
+}
+
+// Overrides a built-in type's hue by re-registering it in the same
+// CARD_TYPES registry custom types already live in (see cardTypes.ts) —
+// typeMeta() reads from that registry, so every card/tile picks up the
+// override automatically with no separate rendering path needed.
+export function applyTypeHues(overrides: Partial<Record<string, number>> | undefined) {
+  if (!overrides) return;
+  Object.entries(overrides).forEach(([key, hue]) => {
+    if (hue == null) return;
+    const base = CARD_TYPES[key] ?? BUILTIN_CARD_TYPES[key];
+    if (base) registerCardType({ ...base, hue });
+  });
 }
 
 export interface AppearancePreset {

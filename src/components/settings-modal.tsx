@@ -9,6 +9,7 @@ import { useState } from "react";
 import type { Profile } from "@/lib/types";
 import type { Tweaks } from "@/lib/theme";
 import { APPEARANCE_PRESETS, ACCENTS, applyBrand } from "@/lib/theme";
+import { BUILTIN_CARD_TYPES } from "@/lib/cardTypes";
 import { AvatarEdit } from "@/components/avatar";
 
 export function PresetGrid({ current, onPick }: { current: string | null; onPick: (p: (typeof APPEARANCE_PRESETS)[number]) => void }) {
@@ -94,6 +95,20 @@ export function SettingsModal({
         <div className="ob-section">
           <span className="ob-label">Accent color</span>
           <AccentRow value={profile.accent} onPick={pickAccent} />
+        </div>
+        <div className="ob-section">
+          <span className="ob-label">Card colors</span>
+          <div className="type-color-grid">
+            {Object.values(BUILTIN_CARD_TYPES).map((def) => (
+              <div className="type-color-row" key={def.key}>
+                <span className="type-color-label">{def.label}</span>
+                <AccentRow
+                  value={t.typeHues[def.key] ?? def.hue}
+                  onPick={(hue) => onSaveTweaks({ typeHues: { ...t.typeHues, [def.key]: hue } })}
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="ob-section">
