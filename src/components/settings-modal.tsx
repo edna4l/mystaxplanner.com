@@ -139,7 +139,7 @@ export function SettingsModal({
         <div className="ob-section">
           <span className="ob-label">Card look</span>
           <Seg value={t.cardVariant} options={["Flat", "Gradient"]} onChange={(v) => onSaveTweaks({ cardVariant: v })} />
-          <span className="ob-hint">Gradient adds a soft depth gradient to every card and a subtle glow on drag targets and hovered stacks, using whatever colors are set above — leave on Flat to keep the current look.</span>
+          <span className="ob-hint">Gradient adds a soft depth gradient throughout the app — Board, Today, Calendar, Bills, the card editor, search, Focus Deck — plus a subtle glow on drag targets and hovered stacks, using whatever colors are set above. New accounts start with this on; switch to Flat any time for the plain look.</span>
         </div>
 
         <div className="ob-section">

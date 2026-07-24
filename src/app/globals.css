@@ -18,7 +18,8 @@
   --muted: color-mix(in oklab, var(--ink) 52%, var(--bg));
   --faint: color-mix(in oklab, var(--ink) 14%, var(--bg));
 }
-.card, .stack-front, .panel, .add-row, .fan-item .card, .filter-chip, .na-item {
+.card, .stack-front, .panel, .add-row, .fan-item .card, .filter-chip, .na-item,
+.brow, .trow, .trisk, .cal-card, .search-row, .daily-reset-row, .focus-card {
   --tint: oklch(var(--tint-L) calc(var(--chroma) * 0.6) var(--hue));
   --accent: oklch(var(--accent-L) var(--chroma) var(--hue));
   --accent-ink: oklch(var(--accent-ink-L, 0.43) calc(var(--chroma) * 0.95) var(--hue));
@@ -350,8 +351,8 @@ input, textarea { font-family: inherit; }
   border: 1px solid oklch(calc(var(--tint-L) - 0.09) calc(var(--chroma) * 0.7) var(--hue));
   transform: translate(calc(var(--i) * 4px), calc(var(--i) * 4px)); z-index: 0; }
 .cal-card { position: relative; z-index: 2; height: 56px; border-radius: 10px; padding: 7px 8px;
-  background: oklch(var(--tint-L) calc(var(--chroma) * 0.6) var(--hue));
-  border: 1px solid oklch(calc(var(--tint-L) - 0.09) calc(var(--chroma) * 0.7) var(--hue));
+  background: var(--tint);
+  border: 1px solid var(--tint-line);
   display: flex; flex-direction: column; gap: 4px; transition: transform .14s ease; }
 .cal-cluster:hover .cal-card { transform: translateY(-2px); }
 .cal-bars { display: none; }
@@ -670,7 +671,15 @@ input, textarea { font-family: inherit; }
 [data-cardstyle="flat"] .card { border: none; box-shadow: none; }
 [data-cardstyle="outline"] .card { background: var(--panel); border: 1.5px solid color-mix(in oklab, var(--accent) 55%, var(--panel)); box-shadow: none; }
 [data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .card,
-[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .stack-front {
+[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .stack-front,
+[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .panel,
+[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .brow,
+[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .trow,
+[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .trisk,
+[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .cal-card,
+[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .search-row,
+[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .daily-reset-row,
+[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .focus-card {
   background: linear-gradient(152deg, var(--tint) 0%, var(--tint-deep) 100%);
 }
 .card:hover { transform: translateY(-3px); }

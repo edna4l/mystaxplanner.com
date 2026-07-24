@@ -9,12 +9,16 @@ export interface Tweaks {
   appearance: "Light" | "Dark";
   palette: "Soft" | "Default" | "Vivid" | "Mono";
   cardStyle: "Paper" | "Flat" | "Outline";
-  // "Gradient" is opt-in — a soft per-hue gradient + glow on a few
-  // specific states (drag targets, hovered stacks) instead of a flat
-  // tint. Derived purely from the existing --hue/--chroma/--tint-L
-  // tokens, so it automatically respects whatever accent/type-color
-  // customization (including the color wheel) is already set, rather
-  // than being a separate hardcoded palette.
+  // Applies throughout the app (Board, Today, Calendar, Bills, the card
+  // editor, search, Focus Deck/Daily Reset) — a soft per-hue gradient +
+  // glow on a few specific states (drag targets, hovered stacks) instead
+  // of a flat tint. Derived purely from the existing --hue/--chroma/
+  // --tint-L tokens, so it automatically respects whatever accent/
+  // type-color customization (including the color wheel) is already
+  // set, rather than being a separate hardcoded palette. Still fully
+  // togglable per-user in Settings — this is just the default new
+  // accounts start with (see TWEAK_DEFAULTS); anyone's already-saved
+  // preference is unaffected by changing this default.
   cardVariant: "Flat" | "Gradient";
   bgTone: "Warm" | "Cool" | "Neutral";
   radius: number;
@@ -39,7 +43,7 @@ export const TWEAK_DEFAULTS: Tweaks = {
   appearance: "Light",
   palette: "Default",
   cardStyle: "Paper",
-  cardVariant: "Flat",
+  cardVariant: "Gradient",
   bgTone: "Warm",
   radius: 18,
   density: "Regular",
