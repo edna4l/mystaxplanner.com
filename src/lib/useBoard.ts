@@ -9,7 +9,8 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { BoardSlot, Card, Slot, CardTypeDef } from "@/lib/types";
 import { newCardFields, defaultTitleFor, registerCardType, unregisterCardType } from "@/lib/cardTypes";
-import { parseISO, toISODate } from "@/lib/date";
+import { parseISO, toISODate, shortISO } from "@/lib/date";
+import { parseVirtualId } from "@/lib/recurrence";
 
 const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -115,6 +116,54 @@ export function useBoard() {
       if (card) created.push({ slot, card: card as Card });
     }
     if (created.length) setBoard((b) => [...created.map((r) => ({ ...r.slot, cards: [r.card] })), ...b]);
+  }
+
+  // Turns a virtual recurring-bill occurrence (id shaped "virtual:<rootId>:<date>",
+  // see src/lib/recurrence.ts) into a real row the moment it diverges from
+  // its series rule — paid, edited, or skipped. occurrence_date always
+  // stays the originally-projected slot date even if `patch.date` moves the
+  // occurrence to a different day, so the rule doesn't regenerate a
+  // duplicate virtual card for that slot.
+  async function materializeOccurrence(virtualId: string, patch: Partial<Card>) {
+    const parsed = parseVirtualId(virtualId);
+    if (!parsed || !userId) return null;
+    let root: Card | null = null;
+    board.forEach((s) => s.cards.forEach((c) => { if (c.id === parsed.rootId) root = c; }));
+    if (!root) return null;
+    const r = root as Card;
+
+    const { data: slot } = await supabase.from("slots").insert({ user_id: userId, name: "" }).select().single();
+    if (!slot) return null;
+
+    const copyFields = { ...r } as Partial<Card>;
+    delete copyFields.id;
+    delete copyFields.created_at;
+    delete copyFields.updated_at;
+    delete copyFields.slot_id;
+    delete copyFields.recur_freq;
+    delete copyFields.recur_until;
+
+    const { data: card } = await supabase
+      .from("cards")
+      .insert({
+        ...copyFields,
+        user_id: userId,
+        slot_id: slot.id,
+        date: parsed.date,
+        due: shortISO(parsed.date),
+        occurrence_date: parsed.date,
+        origin: r.id,
+        paid: false,
+        skipped: false,
+        position_in_slot: 0,
+        ...patch,
+      })
+      .select()
+      .single();
+    if (!card) return null;
+
+    setBoard((b) => [{ ...slot, cards: [card as Card] }, ...b]);
+    return card as Card;
   }
 
   // --- custom card types -----------------------------------------------------
@@ -370,9 +419,11 @@ export function useBoard() {
       delete copyFields.created_at;
       delete copyFields.updated_at;
       delete copyFields.slot_id;
+      delete copyFields.recur_freq;
+      delete copyFields.recur_until;
       const { data: card } = await supabase
         .from("cards")
-        .insert({ ...copyFields, user_id: userId, slot_id: slot.id, date, due, paid: false, origin: root, position_in_slot: 0 })
+        .insert({ ...copyFields, user_id: userId, slot_id: slot.id, date, due, occurrence_date: date, paid: false, skipped: false, origin: root, position_in_slot: 0 })
         .select()
         .single();
       if (card) created.push({ slot, card: card as Card });
@@ -399,7 +450,7 @@ export function useBoard() {
 
   return {
     board, loading, userId, customTypes, reload, addCard, updateCard, deleteCard, merge, unstack, ungroup, renameSlot,
-    stampCard, extendBills, bulkDeleteBills, bulkMarkBills, applyCardOrder, restoreCards,
+    stampCard, extendBills, bulkDeleteBills, bulkMarkBills, applyCardOrder, restoreCards, materializeOccurrence,
     createCustomType, updateCustomType, deleteCustomType,
   };
 }

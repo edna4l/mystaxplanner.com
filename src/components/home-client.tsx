@@ -5,6 +5,7 @@ import { useBoard } from "@/lib/useBoard";
 import { useProfile } from "@/lib/useProfile";
 import type { BoardSlot, Card, Profile } from "@/lib/types";
 import type { ParsedQuickAdd } from "@/lib/quickAdd";
+import { isVirtualId } from "@/lib/recurrence";
 import { applyTheme, applyBrand } from "@/lib/theme";
 import { Topbar, type AppView } from "@/components/topbar";
 import { BoardView } from "@/components/board-view";
@@ -23,16 +24,16 @@ import { SettingsModal } from "@/components/settings-modal";
 import { Toast } from "@/components/toast";
 
 type Open =
-  | { kind: "card"; cardId: string }
+  | { kind: "card"; cardId: string; virtualCard?: Card }
   | { kind: "fan"; slotId: string }
-  | { kind: "dayfan"; label: string; cardIds: string[] }
+  | { kind: "dayfan"; label: string; cards: Card[] }
   | null;
 
 export default function HomeClient() {
   const {
     board, loading, customTypes, addCard, updateCard, deleteCard, merge, unstack, ungroup,
     stampCard, extendBills, bulkDeleteBills, bulkMarkBills, applyCardOrder, restoreCards,
-    createCustomType, updateCustomType, deleteCustomType,
+    materializeOccurrence, createCustomType, updateCustomType, deleteCustomType,
   } = useBoard();
   const { profile, loading: profileLoading, updateProfile, updateTweaks } = useProfile();
   const [view, setView] = useState<AppView>("today");
@@ -69,6 +70,7 @@ export default function HomeClient() {
 
   const openCard = useMemo<Card | null>(() => {
     if (!open || open.kind !== "card") return null;
+    if (open.virtualCard) return open.virtualCard;
     for (const s of board) {
       const c = s.cards.find((x) => x.id === open.cardId);
       if (c) return c;
@@ -83,12 +85,9 @@ export default function HomeClient() {
 
   const dayFan = useMemo(() => {
     if (!open || open.kind !== "dayfan") return null;
-    const cards: Card[] = [];
-    board.forEach((s) => s.cards.forEach((c) => { if (open.cardIds.includes(c.id)) cards.push(c); }));
-    if (!cards.length) return null;
-    cards.sort((a, b) => (a.card_order == null ? 9999 : a.card_order) - (b.card_order == null ? 9999 : b.card_order));
+    const cards = [...open.cards].sort((a, b) => (a.card_order == null ? 9999 : a.card_order) - (b.card_order == null ? 9999 : b.card_order));
     return { label: open.label, cards };
-  }, [open, board]);
+  }, [open]);
 
   const sectionCards = useMemo(() => {
     if (view !== "section" || !sectionType) return [];
@@ -107,6 +106,19 @@ export default function HomeClient() {
     return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
   })();
   const dateStr = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+
+  function openCardHandler(c: Card) {
+    setOpen(isVirtualId(c.id) ? { kind: "card", cardId: c.id, virtualCard: c } : { kind: "card", cardId: c.id });
+  }
+
+  async function handleUpdateCard(id: string, patch: Partial<Card>) {
+    if (isVirtualId(id)) {
+      const card = await materializeOccurrence(id, patch);
+      if (card && open?.kind === "card" && open.cardId === id) setOpen({ kind: "card", cardId: card.id });
+      return;
+    }
+    await updateCard(id, patch);
+  }
 
   async function handleAdd(type: string) {
     const card = await addCard(type, pendingDate ?? undefined);
@@ -148,6 +160,12 @@ export default function HomeClient() {
 
   function handleDeleteCard() {
     if (!openCard) return;
+    if (isVirtualId(openCard.id)) {
+      materializeOccurrence(openCard.id, { skipped: true });
+      setOpen(null);
+      setToast({ msg: "Occurrence skipped", cards: [] });
+      return;
+    }
     const snapshot = openCard;
     deleteCard(openCard.id);
     setOpen(null);
@@ -195,23 +213,23 @@ export default function HomeClient() {
       {view === "today" ? (
         <TodayView
           board={board}
-          onOpenCard={(c) => setOpen({ kind: "card", cardId: c.id })}
-          onUpdate={updateCard}
+          onOpenCard={openCardHandler}
+          onUpdate={handleUpdateCard}
           onGo={() => setView("board")}
         />
       ) : view === "board" ? (
         <BoardView
           board={board}
-          onOpenCard={(c) => setOpen({ kind: "card", cardId: c.id })}
+          onOpenCard={openCardHandler}
           onOpenStack={(s) => setOpen({ kind: "fan", slotId: s.id })}
           onMerge={merge}
         />
       ) : view === "calendar" ? (
         <CalendarView
           board={board}
-          onOpenCard={(c) => setOpen({ kind: "card", cardId: c.id })}
-          onOpenDay={(label, cards) => setOpen({ kind: "dayfan", label, cardIds: cards.map((c) => c.id) })}
-          onSetDate={(cardId, date) => updateCard(cardId, { date })}
+          onOpenCard={openCardHandler}
+          onOpenDay={(label, cards) => setOpen({ kind: "dayfan", label, cards })}
+          onSetDate={(cardId, date) => handleUpdateCard(cardId, { date })}
           onStamp={stampCard}
           onAddOnDate={(date) => { setPendingDate(date); setAddOpen(true); }}
           onAddReusable={() => { setPendingDate(null); setAddOpen(true); }}
@@ -219,8 +237,8 @@ export default function HomeClient() {
       ) : view === "bills" ? (
         <BillsView
           board={board}
-          onUpdate={updateCard}
-          onOpen={(c) => setOpen({ kind: "card", cardId: c.id })}
+          onUpdate={handleUpdateCard}
+          onOpen={openCardHandler}
           onAddBill={() => handleAdd("bill")}
           onExtend={extendBills}
           onBulkDelete={handleBulkDeleteBills}
@@ -230,8 +248,8 @@ export default function HomeClient() {
         <SectionView
           cards={sectionCards}
           type={sectionType}
-          onUpdate={updateCard}
-          onOpen={(c) => setOpen({ kind: "card", cardId: c.id })}
+          onUpdate={handleUpdateCard}
+          onOpen={openCardHandler}
           onAdd={handleAdd}
           onReorder={applyCardOrder}
           onDeleteType={() => handleDeleteType(sectionType)}
@@ -243,7 +261,7 @@ export default function HomeClient() {
         <ExpandedCard
           card={openCard}
           onClose={() => setOpen(null)}
-          onUpdate={(patch) => updateCard(openCard.id, patch)}
+          onUpdate={(patch) => handleUpdateCard(openCard.id, patch)}
           onDelete={handleDeleteCard}
         />
       ) : null}
@@ -252,7 +270,7 @@ export default function HomeClient() {
         <StackFan
           slot={openSlot}
           onClose={() => setOpen(null)}
-          onOpenCard={(c) => setOpen({ kind: "card", cardId: c.id })}
+          onOpenCard={openCardHandler}
           onUnstack={(cardId) => unstack(openSlot.id, cardId)}
           onUngroup={() => { ungroup(openSlot.id); setOpen(null); }}
         />
@@ -263,7 +281,7 @@ export default function HomeClient() {
           title={dayFan.label}
           cards={dayFan.cards}
           onClose={() => setOpen(null)}
-          onOpenCard={(c) => setOpen({ kind: "card", cardId: c.id })}
+          onOpenCard={openCardHandler}
         />
       ) : null}
 
@@ -302,7 +320,14 @@ export default function HomeClient() {
         />
       ) : null}
 
-      {toast ? <Toast msg={toast.msg} actionLabel="Undo" onAction={undoToast} onDismiss={() => setToast(null)} /> : null}
+      {toast ? (
+        <Toast
+          msg={toast.msg}
+          actionLabel={toast.cards.length ? "Undo" : undefined}
+          onAction={toast.cards.length ? undoToast : undefined}
+          onDismiss={() => setToast(null)}
+        />
+      ) : null}
     </div>
   );
 }

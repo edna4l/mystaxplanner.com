@@ -41,6 +41,14 @@ export interface Card {
   pay_url: string | null;
   autopay: boolean | null;
 
+  // Recurring-series fields. recur_freq/recur_until live on the root card
+  // (origin === null) and describe the rule; occurrence_date/skipped are
+  // set only on materialized exception rows. See src/lib/recurrence.ts.
+  recur_freq: "monthly" | "weekly" | "biweekly" | "yearly" | null;
+  recur_until: string | null;
+  occurrence_date: string | null;
+  skipped: boolean | null;
+
   created_at: string;
   updated_at: string;
 }

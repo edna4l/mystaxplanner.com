@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import type { BoardSlot, Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
 import { todayISO, shortISO, money } from "@/lib/date";
+import { expandRecurringBills } from "@/lib/recurrence";
 import * as fx from "@/lib/fx";
 
 function isDone(c: Card) {
@@ -49,11 +50,17 @@ export function TodayView({
 }) {
   const today = todayISO(0);
   const weekEnd = todayISO(7);
-  const all = useMemo(() => {
+  const rangeStart = todayISO(-60);
+  const rawCards = useMemo(() => {
     const out: Card[] = [];
     board.forEach((s) => s.cards.forEach((c) => out.push(c)));
     return out;
   }, [board]);
+  const all = useMemo(() => {
+    const nonBills = rawCards.filter((c) => c.type !== "bill");
+    const bills = rawCards.filter((c) => c.type === "bill");
+    return [...nonBills, ...expandRecurringBills(bills, rangeStart, weekEnd)];
+  }, [rawCards, rangeStart, weekEnd]);
 
   const dueToday = all.filter(
     (c) => c.type !== "habit" && ((c.date && c.date === today) || (!c.date && /^today$/i.test((c.due || "").trim()))) && !(c.type === "bill" && c.paid) && !isDone(c),

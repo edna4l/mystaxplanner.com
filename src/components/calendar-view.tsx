@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import type { BoardSlot, Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
 import { parseISO, toISODate } from "@/lib/date";
+import { expandRecurringBills } from "@/lib/recurrence";
 
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MON = [
@@ -78,9 +79,17 @@ export function CalendarView({
     return out;
   }, [board]);
 
+  const monthStart = toISODate(vy, vm, 1);
+  const monthEnd = toISODate(vy, vm, new Date(vy, vm + 1, 0).getDate());
+  const displayCards = useMemo(() => {
+    const nonBills = allCards.filter((c) => c.type !== "bill");
+    const bills = allCards.filter((c) => c.type === "bill");
+    return [...nonBills, ...expandRecurringBills(bills, monthStart, monthEnd)];
+  }, [allCards, monthStart, monthEnd]);
+
   const byDay = useMemo(() => {
     const m: Record<number, Card[]> = {};
-    allCards.forEach((c) => {
+    displayCards.forEach((c) => {
       const p = parseISO(c.date);
       if (p && p.y === vy && p.m === vm) (m[p.d] = m[p.d] || []).push(c);
     });
@@ -89,7 +98,7 @@ export function CalendarView({
       m[n].sort((a, b) => (a.card_order == null ? 9999 : a.card_order) - (b.card_order == null ? 9999 : b.card_order));
     });
     return m;
-  }, [allCards, vy, vm]);
+  }, [displayCards, vy, vm]);
 
   const unscheduled = useMemo(() => allCards.filter((c) => !parseISO(c.date)), [allCards]);
 

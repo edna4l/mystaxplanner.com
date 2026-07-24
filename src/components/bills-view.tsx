@@ -7,7 +7,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
-import { parseISO, money } from "@/lib/date";
+import { parseISO, money, toISODate } from "@/lib/date";
+import { expandRecurringBills, isVirtualId } from "@/lib/recurrence";
 import { SquareCard } from "@/components/square-card";
 import * as fx from "@/lib/fx";
 
@@ -303,14 +304,21 @@ export function BillsView({
     return out;
   }, [board]);
 
-  const bills = useMemo(() => allBills.filter((b) => {
-    const p = parseISO(b.date);
-    return !p || (p.y === vy && p.m === vm);
-  }), [allBills, vy, vm]);
+  const monthStart = toISODate(vy, vm, 1);
+  const monthEnd = toISODate(vy, vm, new Date(vy, vm + 1, 0).getDate());
+  const bills = useMemo(
+    () => expandRecurringBills(allBills, monthStart, monthEnd),
+    [allBills, monthStart, monthEnd],
+  );
 
   const recurring = useMemo(() => bills.filter((b) => {
     const p = parseISO(b.date);
-    return !!p && p.y === vy && p.m === vm && (b.recur || "Monthly") !== "None";
+    if (!p || p.y !== vy || p.m !== vm) return false;
+    if ((b.recur || "Monthly") === "None") return false;
+    // Already covered by the virtual-occurrence generator (recurrence.ts) —
+    // Extend would just insert a redundant duplicate row for these.
+    if (isVirtualId(b.id) || b.recur_freq) return false;
+    return true;
   }), [bills, vy, vm]);
 
   const total = bills.reduce((a, c) => a + Number(c.amount || 0), 0);
