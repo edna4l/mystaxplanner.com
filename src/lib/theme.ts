@@ -37,6 +37,13 @@ export interface Tweaks {
   // src/lib/smartSuggestions.ts) — so a declined suggestion doesn't
   // keep reappearing every visit.
   dismissedSuggestions: string[];
+  // "Remind me tomorrow" from Focus Deck/Daily Reset (see
+  // src/components/focus-deck.tsx, daily-reset.tsx) — keyed by card id,
+  // valued by the date it should reappear in those two flows. Unlike
+  // Reschedule, this never touches the card's own due date, so an
+  // overdue bill stays honestly overdue everywhere else in the app;
+  // it's just excluded from today's review queue until that date.
+  snoozedBills: Record<string, string>;
 }
 
 export const TWEAK_DEFAULTS: Tweaks = {
@@ -53,6 +60,7 @@ export const TWEAK_DEFAULTS: Tweaks = {
   typeHues: {},
   boardView: "Stacks",
   dismissedSuggestions: [],
+  snoozedBills: {},
 };
 
 const PALETTE = {

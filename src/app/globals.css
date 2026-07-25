@@ -191,19 +191,51 @@ input, textarea { font-family: inherit; }
 
 /* focus deck / daily reset */
 .focus-card { width: min(480px, 96vw); }
-.focus-progress { display: flex; align-items: center; justify-content: space-between; color: var(--muted); margin-bottom: 18px; }
+.focus-progress { display: flex; align-items: center; justify-content: space-between; color: var(--muted); margin-bottom: 18px; gap: 10px; }
+.focus-progress-mid { display: flex; align-items: center; gap: 8px; }
+.focus-back { color: var(--muted); font-weight: 600; padding: 0; }
+.focus-back:disabled { opacity: 0.35; cursor: default; }
+.focus-dots { display: flex; align-items: center; gap: 5px; }
+.focus-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); transition: background .15s ease, transform .15s ease; }
+.focus-dot.on { background: oklch(var(--accent-L) var(--chroma) var(--hue)); transform: scale(1.3); }
+.focus-bar { width: 90px; height: 4px; border-radius: 999px; background: var(--faint); overflow: hidden; }
+.focus-bar span { display: block; height: 100%; background: oklch(var(--accent-L) var(--chroma) var(--hue)); transition: width .2s ease; }
 .focus-card-preview { display: flex; flex-direction: column; gap: 8px; padding-bottom: 22px; margin-bottom: 22px; border-bottom: 1px solid var(--faint); }
 .focus-card-title { font-family: var(--font-display); font-weight: 700; font-size: 26px; letter-spacing: -0.02em; margin: 0; color: var(--ink); }
 .focus-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .focus-complete { flex: 1; min-width: 140px; text-align: center; }
 .focus-reschedule { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .focus-breakdown { display: flex; flex-direction: column; gap: 12px; }
-.focus-done { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 46px 36px; }
-.focus-done-title { font-family: var(--font-display); font-weight: 700; font-size: 22px; margin: 0; color: var(--ink); }
-.daily-reset-list { display: flex; flex-direction: column; gap: 10px; margin: 18px 0; max-height: 40vh; overflow: auto; }
-.daily-reset-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
-.daily-reset-row-title { font-size: 13.5px; font-weight: 600; color: var(--ink); }
-.daily-reset-row-actions { display: flex; gap: 8px; flex: none; }
+.focus-undo-toast {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 16px; padding: 10px 14px; border-radius: 12px;
+  background: color-mix(in oklab, var(--ink) 6%, transparent); font-size: 12.5px; color: var(--muted);
+}
+.focus-undo-toast .link-btn { font-weight: 700; color: var(--ink); }
+.focus-done, .focus-intro { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 46px 36px; }
+.focus-done { gap: 20px; }
+.focus-done-title, .focus-intro-title { font-family: var(--font-display); font-weight: 700; font-size: 22px; margin: 0; color: var(--ink); }
+.focus-intro-title { font-size: 24px; }
+.focus-intro-sub { font-size: 15px; color: var(--ink); margin: 0; }
+.focus-intro-time { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
+/* Removing the top card off the stack: it lifts and fades while the
+   next one settles into place underneath, echoing the Board's own
+   layered-card visual. */
+.focus-card-stack { position: relative; width: min(480px, 96vw); }
+.focus-card-stack .focus-card { width: 100%; }
+.focus-card-exit { position: absolute; inset: 0; z-index: 2; pointer-events: none; animation: focusExit .22s ease forwards; }
+.focus-card-enter { animation: focusEnter .22s ease; }
+@keyframes focusExit { from { transform: translateY(0) scale(1); opacity: 1; } to { transform: translateY(-18px) scale(.96); opacity: 0; } }
+@keyframes focusEnter { from { transform: translateY(10px) scale(.97); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+.daily-reset-card { width: min(560px, 96vw); }
+.daily-reset-list { display: flex; flex-direction: column; gap: 10px; margin: 18px 0; max-height: 48vh; overflow: auto; }
+.daily-reset-row { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+.daily-reset-row-title { font-size: 13.5px; font-weight: 600; color: var(--ink); text-align: left; }
+.daily-reset-row-actions { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.daily-reset-row-actions .link-btn { font-size: 12px; color: var(--muted); }
+.daily-reset-row-actions .link-btn:hover { color: var(--ink); }
+.daily-reset-dismiss { color: color-mix(in oklab, var(--ink) 45%, oklch(0.6 0.18 25)) !important; }
+.daily-reset-date { font-size: 12px; padding: 3px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
 
 /* today view */
 .today { flex: 1; padding: 8px clamp(20px, 5vw, 64px) 80px; max-width: 1080px; margin: 0 auto; width: 100%; }

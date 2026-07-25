@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useBoard } from "@/lib/useBoard";
 import { useProfile } from "@/lib/useProfile";
 import type { BoardSlot, Card, Profile } from "@/lib/types";
@@ -56,21 +56,6 @@ export default function HomeClient() {
   // reshuffling under the user as the board updates mid-flow.
   const [focusQueue, setFocusQueue] = useState<Card[] | null>(null);
   const [dailyResetOpen, setDailyResetOpen] = useState(false);
-  // "N of M done today" needs *some* baseline, but there's no persisted
-  // completion history (by design — see the Phase 5 plan). This
-  // captures how many things were due the first time the board loads
-  // each session, so Daily Reset can compare against it; it resets on
-  // page reload rather than truly tracking the calendar day, which is
-  // an accepted tradeoff for not adding a new database column.
-  const dailyBaselineRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (dailyBaselineRef.current == null && board.length > 0) {
-      const summary = computeTodaySummary(board);
-      const ids = new Set<string>();
-      [...summary.overdue, ...summary.dueToday, ...summary.habitsRisk].forEach((c) => ids.add(c.id));
-      dailyBaselineRef.current = ids.size;
-    }
-  }, [board]);
 
   useEffect(() => {
     if (profile) applyTheme(profile.tweaks);
@@ -242,16 +227,28 @@ export default function HomeClient() {
 
   function todayQueue(): Card[] {
     const summary = computeTodaySummary(board);
+    const snoozed = profile?.tweaks.snoozedBills ?? {};
+    const today = todayISO(0);
     const seen = new Set<string>();
     return [...summary.overdue, ...summary.dueToday, ...summary.habitsRisk].filter((c) => {
       if (seen.has(c.id)) return false;
       seen.add(c.id);
+      const until = snoozed[c.id];
+      if (until && until > today) return false;
       return true;
     });
   }
 
   function startFocusDeck() {
     setFocusQueue(todayQueue());
+  }
+
+  // "Remind me tomorrow" (Focus Deck/Daily Reset, overdue bills only) —
+  // deliberately doesn't touch the card's own date, so it stays honestly
+  // overdue everywhere else; it's just excluded from these two review
+  // flows' queue until tomorrow. See Tweaks.snoozedBills (lib/theme.ts).
+  function snoozeBillUntilTomorrow(card: Card) {
+    updateTweaks({ snoozedBills: { ...(profile?.tweaks.snoozedBills ?? {}), [card.id]: todayISO(1) } });
   }
 
   // Same skip-vs-hard-delete routing bulk delete already uses (Bills
@@ -282,6 +279,16 @@ export default function HomeClient() {
     let root: Card | null = null;
     board.forEach((s) => s.cards.forEach((c) => { if (c.id === rootId) root = c; }));
     return root;
+  }
+
+  // Focus Deck's "Skip for now" on a bill — recurring occurrences route
+  // through the same skip mechanism as everywhere else (so the rule
+  // doesn't regenerate an equivalent one immediately); a one-off bill
+  // has no stronger primitive than a plain advance, so this is a no-op
+  // for those and Focus Deck's Back just re-shows the card.
+  function skipBillForDeck(card: Card) {
+    if (seriesRootOf(card.id)?.recur_freq) return skipOccurrence(card.id);
+    return Promise.resolve(null);
   }
 
   async function handleBulkDeleteBills(ids: string[]) {
@@ -474,16 +481,24 @@ export default function HomeClient() {
       ) : null}
 
       {focusQueue ? (
-        <FocusDeck queue={focusQueue} onUpdate={handleUpdateCard} onClose={() => setFocusQueue(null)} />
+        <FocusDeck
+          queue={focusQueue}
+          onUpdate={handleUpdateCard}
+          onOpenCard={(c) => { setFocusQueue(null); openCardHandler(c); }}
+          onSnoozeBill={snoozeBillUntilTomorrow}
+          onSkipBill={skipBillForDeck}
+          onUnskipBill={unskipOccurrence}
+          onClose={() => setFocusQueue(null)}
+        />
       ) : null}
 
       {dailyResetOpen ? (
         <DailyReset
-          total={Math.max(dailyBaselineRef.current ?? 0, todayQueue().length)}
           unfinished={todayQueue()}
+          onUpdate={handleUpdateCard}
           onOpenCard={(c) => { setDailyResetOpen(false); openCardHandler(c); }}
-          onMoveToTomorrow={(c) => handleUpdateCard(c.id, { date: todayISO(1) })}
-          onDelete={handleDeleteOrSkipCard}
+          onSnoozeBill={snoozeBillUntilTomorrow}
+          onDismiss={handleDeleteOrSkipCard}
           onClose={() => setDailyResetOpen(false)}
         />
       ) : null}
