@@ -802,10 +802,19 @@ input, textarea { font-family: inherit; }
 .timeline-month { position: relative; margin-bottom: 2px; }
 .timeline-month-head { display: flex; align-items: center; gap: 10px; padding: 8px 0 4px clamp(36px, 6vw, 80px); }
 .timeline-dot {
-  position: absolute; left: calc(clamp(20px, 5vw, 64px) - 5px); top: 12px;
-  width: 12px; height: 12px; border-radius: 50%; background: var(--ink); border: 2px solid var(--bg);
+  position: absolute; left: calc(clamp(20px, 5vw, 64px) - 6px); top: 11px;
+  width: 14px; height: 14px; border-radius: 50%; background: var(--ink); border: 2px solid var(--bg);
 }
-.timeline-board { grid-template-columns: repeat(auto-fill, var(--card-size)); justify-content: start; padding: 0 clamp(20px, 5vw, 64px) 6px clamp(36px, 6vw, 80px); gap: calc(var(--gap) + 6px) var(--gap); max-width: none; margin: 0; }
+/* Wider, fewer-but-bigger cards instead of the fixed board card size —
+   a month with only 1-2 items still fills real width instead of
+   looking like a narrow strip on a wide screen. */
+.timeline-board {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  justify-content: start; padding: 0 clamp(20px, 5vw, 64px) 6px clamp(36px, 6vw, 80px);
+  gap: calc(var(--gap) + 6px) var(--gap); max-width: none; margin: 0;
+}
+.timeline-board .slot { width: auto; height: auto; aspect-ratio: 1 / 1; }
+.timeline-board .slot.wide { aspect-ratio: auto; height: var(--card-size); }
 
 /* ---------- card ---------- */
 .swatch { width: 11px; height: 11px; border-radius: 3px; background: var(--accent); display: inline-block; flex: none; }
