@@ -11,6 +11,7 @@ import type { BoardSlot, Card } from "@/lib/types";
 import { PlannerIndex } from "@/components/planner-index";
 import { PlannerPlan } from "@/components/planner-plan";
 import { PlannerFocus } from "@/components/planner-focus";
+import { PlannerWork } from "@/components/planner-work";
 
 export type PlannerTab = "index" | "focus" | "plan" | "work" | "finance" | "wellness" | "home" | "notes";
 
@@ -73,6 +74,8 @@ export function PlannerView({
           <PlannerPlan board={board} onOpenCard={onOpenCard} onUpdateCard={onUpdateCard} />
         ) : tab === "focus" ? (
           <PlannerFocus board={board} onOpenCard={onOpenCard} onStartFocusDeck={onStartFocusDeck} onOpenDailyReset={onOpenDailyReset} />
+        ) : tab === "work" ? (
+          <PlannerWork board={board} onOpenCard={onOpenCard} onUpdateCard={onUpdateCard} />
         ) : (
           <ComingSoon label={active.label} hue={active.hue} />
         )}
