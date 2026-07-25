@@ -383,9 +383,9 @@ input, textarea { font-family: inherit; }
 .cal-month .mono { color: var(--muted); font-weight: 400; font-size: 20px; }
 .cal-nav { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 20px; line-height: 1; transition: all .14s ease; }
 .cal-nav:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
 .cal-wd { text-align: center; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); padding-bottom: 4px; }
-.cal-cell { min-height: 104px; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in oklab, var(--panel) 60%, var(--bg)); padding: 8px; position: relative; display: flex; flex-direction: column; }
+.cal-cell { min-height: 104px; min-width: 0; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in oklab, var(--panel) 60%, var(--bg)); padding: 8px; position: relative; display: flex; flex-direction: column; }
 .cal-cell.empty { background: transparent; border-color: transparent; }
 .cal-cell.today { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
 .cal-cell.drop { border-color: oklch(0.6 0.13 250); box-shadow: inset 0 0 0 2px oklch(0.6 0.13 250); background: color-mix(in oklab, oklch(0.6 0.13 250) 8%, var(--panel)); }
@@ -397,7 +397,7 @@ input, textarea { font-family: inherit; }
 .cal-add:hover { background: var(--ink); color: var(--bg); }
 .cal-drag { cursor: grab; }
 .cal-drag:active { cursor: grabbing; }
-.cal-cluster { margin-top: 6px; cursor: pointer; flex: 1; display: flex; flex-direction: column; gap: 3px; min-height: 20px; }
+.cal-cluster { margin-top: 6px; cursor: pointer; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; min-height: 20px; }
 .cal-entry {
   display: flex; align-items: center; gap: 5px; min-width: 0; padding: 3px 6px; border-radius: 7px;
   background: var(--tint); border: 1px solid var(--tint-line); transition: transform .14s ease;
