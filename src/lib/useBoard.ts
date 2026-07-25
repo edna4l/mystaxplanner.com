@@ -71,6 +71,32 @@ export function useBoard() {
     reload();
   }, [reload]);
 
+  // Cross-device/tab sync — without this, a change made on one device
+  // only shows up elsewhere after a manual refresh. Listens for any
+  // change to this user's own slots/cards (RLS already scopes it, but
+  // the filter also avoids the client evaluating events for other
+  // users) and re-syncs shortly after, debounced so a burst of several
+  // changes (e.g. a bulk action) triggers one reload instead of many.
+  // Requires cards/slots to be added to the supabase_realtime
+  // publication — see supabase/migrations_0005_enable_realtime.sql.
+  useEffect(() => {
+    if (!userId) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    function scheduleReload() {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => { reload(); }, 700);
+    }
+    const channel = supabase
+      .channel(`board-sync-${userId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cards", filter: `user_id=eq.${userId}` }, scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "slots", filter: `user_id=eq.${userId}` }, scheduleReload)
+      .subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(channel);
+    };
+  }, [userId, supabase, reload]);
+
   // --- mutations -----------------------------------------------------------
 
   async function addCard(type: string, date?: string) {
