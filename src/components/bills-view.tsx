@@ -107,7 +107,7 @@ function BillsRow({
   const soon = isDueSoon(b);
   const overdue = overdueLabel(b);
   return (
-    <div className={"brow" + (soon ? " brow-soon" : "") + (overdue ? " brow-overdue" : "")} style={{ "--hue": typeMeta("bill").hue } as React.CSSProperties}>
+    <div className={"brow" + (b.paid ? " brow-paid" : soon ? " brow-soon" : "") + (!b.paid && overdue ? " brow-overdue" : "")} style={{ "--hue": typeMeta("bill").hue } as React.CSSProperties}>
       <button
         className={"paydot" + (b.paid ? " on" : "")}
         title={b.paid ? "Paid" : "Mark paid"}

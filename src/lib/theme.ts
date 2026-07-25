@@ -20,6 +20,11 @@ export interface Tweaks {
   // accounts start with (see TWEAK_DEFAULTS); anyone's already-saved
   // preference is unaffected by changing this default.
   cardVariant: "Flat" | "Gradient";
+  // How much darker/more saturated the gradient's far stop gets — Subtle
+  // is the default so dozens of cards/panels on screen at once don't
+  // read as visually heavy; Bold restores the original, more intense
+  // look for anyone who wants it turned up.
+  gradientIntensity: "Subtle" | "Balanced" | "Bold";
   bgTone: "Warm" | "Cool" | "Neutral";
   radius: number;
   density: "Compact" | "Regular" | "Comfy";
@@ -51,6 +56,7 @@ export const TWEAK_DEFAULTS: Tweaks = {
   palette: "Default",
   cardStyle: "Paper",
   cardVariant: "Gradient",
+  gradientIntensity: "Subtle",
   bgTone: "Warm",
   radius: 18,
   density: "Regular",
@@ -80,6 +86,11 @@ const DARK_BG = {
   Neutral: { bg: "oklch(0.2 0.002 0)", ink: "oklch(0.94 0.002 0)", panel: "oklch(0.25 0.003 0)", line: "oklch(0.34 0.004 0)" },
 };
 const DENSITY = { Compact: { s: 142, g: 12 }, Regular: { s: 168, g: 16 }, Comfy: { s: 196, g: 20 } };
+const GRADIENT_INTENSITY = {
+  Subtle: { mul: 1.05, drop: 0.1 },
+  Balanced: { mul: 1.35, drop: 0.13 },
+  Bold: { mul: 1.7, drop: 0.16 },
+};
 const FONTS = {
   Friendly: { disp: "'Bricolage Grotesque'", ui: "'Hanken Grotesk'" },
   Modern: { disp: "'Space Grotesk'", ui: "'Hanken Grotesk'" },
@@ -106,6 +117,9 @@ export function applyTheme(t: Tweaks) {
   r.style.setProperty("--font-ui", f.ui);
   r.setAttribute("data-cardstyle", (t.cardStyle || "Paper").toLowerCase());
   r.setAttribute("data-cardvariant", (t.cardVariant || "Flat").toLowerCase());
+  const gi = GRADIENT_INTENSITY[t.gradientIntensity] || GRADIENT_INTENSITY.Subtle;
+  r.style.setProperty("--tint-deep-mul", String(gi.mul));
+  r.style.setProperty("--tint-deep-drop", String(gi.drop));
   const dark = t.appearance === "Dark";
   r.setAttribute("data-appearance", dark ? "dark" : "light");
   if (dark) {

@@ -10,6 +10,11 @@
   --chroma: 0.085;
   --tint-L: 0.93;
   --accent-L: 0.56;
+  /* Gradient depth (see Settings > Cards > Gradient intensity) — how
+     much darker/more saturated the gradient's far stop gets relative to
+     --tint. Subtle by default; Settings can turn it up per-user. */
+  --tint-deep-drop: 0.1;
+  --tint-deep-mul: 1.05;
   --card-size: 168px;
   --gap: 16px;
   --radius: 18px;
@@ -27,8 +32,8 @@
   /* Deeper, more saturated version of the same hue — the second stop
      for the optional gradient card variant below. Derived from the
      same tokens so it always matches whatever hue is set, per-type or
-     custom. */
-  --tint-deep: oklch(calc(var(--tint-L) - 0.16) calc(var(--chroma) * 1.7) var(--hue));
+     custom; --tint-deep-drop/-mul scale with the intensity setting. */
+  --tint-deep: oklch(calc(var(--tint-L) - var(--tint-deep-drop)) calc(var(--chroma) * var(--tint-deep-mul)) var(--hue));
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
@@ -515,6 +520,13 @@ input, textarea { font-family: inherit; }
 .brow-soon { border-color: oklch(0.62 0.14 45); box-shadow: 0 0 0 1px oklch(0.62 0.14 45 / 30%); }
 .brow-soon-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: oklch(0.5 0.15 45); background: oklch(0.94 0.07 55); padding: 2px 7px; border-radius: 999px; margin-left: 8px; }
 .brow-overdue { border-color: oklch(0.6 0.18 25); box-shadow: 0 0 0 1px oklch(0.6 0.18 25 / 30%); }
+/* Paid rows fade back so the eye lands on what's still unpaid — the
+   only other status a plain unpaid row can have is soon/overdue, so a
+   paid bill should read as visibly "done" at a glance, not just via
+   the small paydot. */
+.brow-paid { opacity: 0.6; background: color-mix(in oklab, var(--ink) 3%, var(--panel)); }
+.brow-paid:hover { opacity: 0.85; }
+.brow-paid .brow-name { text-decoration: line-through; text-decoration-color: var(--muted); color: var(--muted); }
 .blist-break { padding: 14px 4px 4px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink); border-top: 2px solid var(--ink); margin-top: 6px; display: flex; justify-content: space-between; align-items: baseline; }
 .blist-break-sum { font-size: 13px; color: var(--ink); font-weight: 900; text-transform: none; letter-spacing: normal; }
 .brow-amt-edit { background: transparent; border: none; padding: 2px 4px; margin: -2px -4px; font: inherit; cursor: pointer; color: inherit; border-radius: 6px; }
@@ -759,14 +771,23 @@ input, textarea { font-family: inherit; }
 [data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .card,
 [data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .stack-front,
 [data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .panel,
-[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .brow,
-[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .trow,
-[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .trisk,
 [data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .cal-entry,
 [data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .search-row,
 [data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .daily-reset-row,
 [data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .focus-card {
   background: linear-gradient(152deg, var(--tint) 0%, var(--tint-deep) 100%);
+}
+/* Bills list/category rows stay neutral (var(--panel), matching Flat
+   mode's own row background) even in Gradient mode — color there is
+   reserved for status (due soon/overdue/paid) and accents, not painted
+   onto every single row. Table header rows (.brow-h) share the .brow
+   class and get this same neutral treatment "for free," fixing the
+   header-tinting issue that came with the old blanket rule. Today's
+   .trow/.trisk rows have no background at all in Flat mode (they sit
+   directly on the page), so they're simply left out of the gradient
+   rule above instead of gaining one only in Gradient mode. */
+[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .brow {
+  background: var(--panel);
 }
 .card:hover { transform: translateY(-3px); }
 [data-cardstyle="paper"] .card:hover { box-shadow: 0 2px 4px rgba(0,0,0,.06), 0 14px 28px -10px rgba(0,0,0,.24); }
