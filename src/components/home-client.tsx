@@ -397,6 +397,7 @@ export default function HomeClient() {
           dismissedSuggestions={profile?.tweaks.dismissedSuggestions ?? []}
           onDismissSuggestion={(key) => updateTweaks({ dismissedSuggestions: [...(profile?.tweaks.dismissedSuggestions ?? []), key] })}
           onAdd={() => { setPendingDate(null); setAddOpen(true); }}
+          onUpdateCard={handleUpdateCard}
         />
       ) : view === "calendar" ? (
         <CalendarView

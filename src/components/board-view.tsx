@@ -82,6 +82,7 @@ export function BoardView({
   dismissedSuggestions,
   onDismissSuggestion,
   onAdd,
+  onUpdateCard,
 }: {
   board: BoardSlot[];
   onOpenCard: (card: Card, rect: DOMRect | null) => void;
@@ -95,9 +96,11 @@ export function BoardView({
   dismissedSuggestions: string[];
   onDismissSuggestion: (key: string) => void;
   onAdd: () => void;
+  onUpdateCard: (id: string, patch: Partial<Card>) => void;
 }) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [laneOverKey, setLaneOverKey] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>("date");
 
   // Standalone bills (single-card slots) are pulled out of the grid and
@@ -127,6 +130,36 @@ export function BoardView({
       onDragOver: (e) => { if (dragId && dragId !== slotId) { e.preventDefault(); setOverId(slotId); } },
       onDragLeave: () => setOverId((o) => (o === slotId ? null : o)),
       onDrop: (e) => { e.preventDefault(); if (dragId) onMerge(dragId, slotId); setDragId(null); setOverId(null); },
+    };
+  }
+
+  // Now/Next/Later buckets are purely computed from date (see nowTiles/
+  // nextTiles/laterTiles below) — there's no persisted "which lane" field
+  // to write to, so dragging a card into a different lane just moves its
+  // due date into that lane's range instead. Only single-card slots have
+  // one unambiguous date to move; manual multi-card stacks are left out
+  // (dragId simply won't resolve to a single card for those, so the drop
+  // silently no-ops), and habits don't move since their lane comes from
+  // streak risk, not a date field.
+  function laneTargetDate(key: string): string | null {
+    if (key === "now") return todayISO(0);
+    if (key === "next") return todayISO(3);
+    return null; // Later: no date at all, same as any other undated card
+  }
+  function laneDropProps(key: string): React.HTMLAttributes<HTMLDivElement> {
+    return {
+      onDragOver: (e) => { if (dragId) { e.preventDefault(); setLaneOverKey(key); } },
+      onDragLeave: () => setLaneOverKey((k) => (k === key ? null : k)),
+      onDrop: (e) => {
+        e.preventDefault();
+        if (dragId) {
+          const slot = board.find((s) => s.id === dragId);
+          if (slot && slot.cards.length === 1 && slot.cards[0].type !== "habit") {
+            onUpdateCard(slot.cards[0].id, { date: laneTargetDate(key) });
+          }
+        }
+        setDragId(null); setLaneOverKey(null);
+      },
     };
   }
 
@@ -343,20 +376,26 @@ export function BoardView({
         nowTiles.length || nextTiles.length || laterTiles.length ? (
           <div className="nnl-lanes">
             {[
-              { key: "now", label: "Now", sub: "Urgent", tiles: nowTiles },
-              { key: "next", label: "Next", sub: "Upcoming", tiles: nextTiles },
-              { key: "later", label: "Later", sub: "Not urgent", tiles: laterTiles },
+              { key: "now", label: "Now", sub: "Urgent", tiles: nowTiles, empty: "Nothing urgent right now." },
+              { key: "next", label: "Next", sub: "Upcoming", tiles: nextTiles, empty: "Nothing coming up yet." },
+              { key: "later", label: "Later", sub: "Not urgent", tiles: laterTiles, empty: "Nothing on the horizon." },
             ].map((g) => (
-              <div className="nnl-lane" key={g.key}>
+              <div
+                className={"nnl-lane nnl-lane-" + g.key + (laneOverKey === g.key ? " over" : "")}
+                key={g.key}
+                {...laneDropProps(g.key)}
+              >
                 <div className="nnl-lane-head">
+                  <span className="nnl-lane-dot" />
                   <span className="section-label">{g.label}</span>
                   <span className="nnl-lane-sub">{g.sub}</span>
                 </div>
                 {g.tiles.length ? (
                   <main className="board nnl-lane-board">{[...g.tiles].sort(cmpBy("date")).map((t) => t.node)}</main>
                 ) : (
-                  <div className="nnl-lane-empty">Nothing here</div>
+                  <div className="nnl-lane-empty">{g.empty}</div>
                 )}
+                {laneOverKey === g.key ? <div className="nnl-lane-drop-hint">Move to {g.label}</div> : null}
               </div>
             ))}
           </div>
