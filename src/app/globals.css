@@ -427,6 +427,9 @@ input, textarea { font-family: inherit; }
 .bext:disabled { opacity: 0.4; cursor: default; }
 .bsort { border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-weight: 600; font-size: 12.5px; padding: 8px 12px; border-radius: 999px; cursor: pointer; appearance: none; -webkit-appearance: none; }
 .bsort:hover { border-color: var(--ink); }
+.bsearch { border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 12.5px; padding: 8px 13px; border-radius: 999px; min-width: 150px; }
+.bsearch:focus { outline: none; border-color: var(--ink); }
+.bsearch::placeholder { color: var(--muted); }
 /* bills calendar */
 .bcal { border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--panel); }
 .bcal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
@@ -462,6 +465,18 @@ input, textarea { font-family: inherit; }
 .brow-overdue { border-color: oklch(0.6 0.18 25); box-shadow: 0 0 0 1px oklch(0.6 0.18 25 / 30%); }
 .blist-break { padding: 14px 4px 4px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink); border-top: 2px solid var(--ink); margin-top: 6px; display: flex; justify-content: space-between; align-items: baseline; }
 .blist-break-sum { font-size: 13px; color: var(--ink); font-weight: 900; text-transform: none; letter-spacing: normal; }
+.brow-amt-edit { background: transparent; border: none; padding: 2px 4px; margin: -2px -4px; font: inherit; cursor: pointer; color: inherit; border-radius: 6px; }
+.brow-amt-edit:hover { background: color-mix(in oklab, var(--ink) 8%, transparent); text-decoration: underline; text-underline-offset: 2px; }
+.brow-amt-input { width: 78px; font: inherit; border: 1px solid var(--ink); border-radius: 6px; padding: 2px 6px; background: var(--panel); color: var(--ink); }
+/* undo-after-mark-paid toast */
+.bundo {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 14px; background: var(--ink); color: var(--bg);
+  padding: 12px 18px; border-radius: 999px; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  font-size: 13px; font-weight: 600; z-index: 50;
+}
+.bundo-btn { border: none; background: color-mix(in oklab, var(--bg) 20%, transparent); color: var(--bg); font-weight: 700; padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+.bundo-btn:hover { background: color-mix(in oklab, var(--bg) 32%, transparent); }
 /* bulk toolbar */
 .bbulk { display: flex; align-items: center; gap: 10px; background: var(--ink); color: var(--bg); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; flex-wrap: wrap; }
 .bbulk-count { font-weight: 700; font-size: 13px; margin-right: 6px; }

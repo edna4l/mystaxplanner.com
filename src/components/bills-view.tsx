@@ -4,12 +4,12 @@
 // layouts (List/Calendar/Cards/Category), sort controls, a payoff
 // tracker, a 6-month spend trend, due-soon highlighting, and bulk
 // select/mark/delete.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
 import { parseISO, money, toISODate } from "@/lib/date";
 import { expandRecurringBills } from "@/lib/recurrence";
-import { remainingDue, isDueSoon, overdueLabel } from "@/lib/bills";
+import { remainingDue, isDueSoon, overdueLabel, dueInLabel } from "@/lib/bills";
 import { SquareCard } from "@/components/square-card";
 import * as fx from "@/lib/fx";
 
@@ -56,10 +56,51 @@ function groupKeyFor(b: Card, sortBy: SortKey): string | null {
   return null;
 }
 
+// Click-to-edit amount, used only for the simple case (no balance
+// tracking) — bills with a running balance (e.g. credit cards) have
+// amount/balance semantics that need the full card editor instead.
+function InlineAmount({ value, onSave }: { value: number; onSave: (v: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value || ""));
+  if (!editing) {
+    return (
+      <button
+        className="brow-amt-edit mono"
+        title="Edit amount"
+        onClick={(e) => { e.stopPropagation(); setDraft(String(value || "")); setEditing(true); }}
+      >
+        {money(value)}
+      </button>
+    );
+  }
+  function commit() {
+    const n = Number(draft);
+    if (!Number.isNaN(n) && n >= 0) onSave(n);
+    setEditing(false);
+  }
+  return (
+    <input
+      className="brow-amt-input mono"
+      type="number"
+      step="0.01"
+      min="0"
+      autoFocus
+      value={draft}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+        if (e.key === "Escape") setEditing(false);
+      }}
+    />
+  );
+}
+
 function BillsRow({
-  b, onUpdate, onOpen, hideCat, selected, onToggleSelect,
+  b, onUpdate, onTogglePaid, onOpen, hideCat, selected, onToggleSelect,
 }: {
-  b: Card; onUpdate: (id: string, patch: Partial<Card>) => void; onOpen: (b: Card) => void;
+  b: Card; onUpdate: (id: string, patch: Partial<Card>) => void; onTogglePaid: (b: Card) => void; onOpen: (b: Card) => void;
   hideCat?: boolean; selected?: boolean; onToggleSelect?: (id: string) => void;
 }) {
   const remaining = remainingDue(b);
@@ -70,19 +111,23 @@ function BillsRow({
       <button
         className={"paydot" + (b.paid ? " on" : "")}
         title={b.paid ? "Paid" : "Mark paid"}
-        onClick={(e) => { if (!b.paid) fx.coin(e.currentTarget); onUpdate(b.id, { paid: !b.paid }); }}
+        onClick={(e) => { if (!b.paid) fx.coin(e.currentTarget); onTogglePaid(b); }}
       />
       <span className="brow-name" onClick={() => onOpen(b)}>
         {b.cover?.kind === "emoji" ? <span className="brow-emoji">{b.cover.val}</span> : null}
         {b.title}
         {b.last4 ? <span className="mono tiny" style={{ marginLeft: 6, color: "var(--muted)" }}>•••• {b.last4}</span> : null}
         {b.autopay ? <span className="brow-soon-badge" style={{ color: "oklch(0.5 0.12 150)", background: "oklch(0.94 0.05 150)" }}>Autopay</span> : null}
-        {overdue ? <span className="brow-soon-badge" style={{ color: "oklch(0.55 0.16 25)", background: "oklch(0.95 0.05 25)" }}>{overdue}</span> : soon ? <span className="brow-soon-badge">Due soon</span> : null}
+        {overdue ? <span className="brow-soon-badge" style={{ color: "oklch(0.55 0.16 25)", background: "oklch(0.95 0.05 25)" }}>{overdue}</span> : soon ? <span className="brow-soon-badge">{dueInLabel(b) || "Due soon"}</span> : null}
       </span>
       {hideCat ? <span /> : <span className="brow-cat">{b.category || "—"}</span>}
       <span className="brow-note">{b.notes || "—"}</span>
       <span className="brow-due mono">{formatDue(b)}</span>
-      <span className="brow-amt-due mono">{remaining > 0 ? money(remaining) : "—"}</span>
+      <span className="brow-amt-due mono">
+        {remaining > 0 ? (
+          !b.paid && !b.balance ? <InlineAmount value={b.amount || 0} onSave={(v) => onUpdate(b.id, { amount: v })} /> : money(remaining)
+        ) : "—"}
+      </span>
       <span className="brow-amt-paid mono">{b.paid ? money(b.amount) : "—"}</span>
       {onToggleSelect ? (
         <input type="checkbox" className="brow-check" checked={!!selected} onChange={() => onToggleSelect(b.id)} title="Select for bulk actions" />
@@ -92,10 +137,10 @@ function BillsRow({
 }
 
 function BillsList({
-  bills, sortBy, subSort, onUpdate, onOpen, selected, onToggleSelect,
+  bills, sortBy, subSort, onUpdate, onTogglePaid, onOpen, selected, onToggleSelect,
 }: {
   bills: Card[]; sortBy: SortKey; subSort: SortKey; onUpdate: (id: string, patch: Partial<Card>) => void;
-  onOpen: (b: Card) => void; selected: Set<string>; onToggleSelect: (id: string) => void;
+  onTogglePaid: (b: Card) => void; onOpen: (b: Card) => void; selected: Set<string>; onToggleSelect: (id: string) => void;
 }) {
   const sorted = sortBills(bills, sortBy, subSort);
   const groupSums: Record<string, number> = {};
@@ -122,7 +167,7 @@ function BillsList({
                 {sortBy === "category" ? <span className="blist-break-sum mono">{money(groupSums[key as string])}</span> : null}
               </div>
             ) : null}
-            <BillsRow b={b} onUpdate={onUpdate} onOpen={onOpen} selected={selected.has(b.id)} onToggleSelect={onToggleSelect} />
+            <BillsRow b={b} onUpdate={onUpdate} onTogglePaid={onTogglePaid} onOpen={onOpen} selected={selected.has(b.id)} onToggleSelect={onToggleSelect} />
           </div>
         );
       })}
@@ -144,10 +189,10 @@ function BillsCards({ bills, sortBy, subSort, onOpen }: { bills: Card[]; sortBy:
 }
 
 function BillsCategory({
-  bills, sortBy, subSort, onUpdate, onOpen, selected, onToggleSelect,
+  bills, sortBy, subSort, onUpdate, onTogglePaid, onOpen, selected, onToggleSelect,
 }: {
   bills: Card[]; sortBy: SortKey; subSort: SortKey; onUpdate: (id: string, patch: Partial<Card>) => void;
-  onOpen: (b: Card) => void; selected: Set<string>; onToggleSelect: (id: string) => void;
+  onTogglePaid: (b: Card) => void; onOpen: (b: Card) => void; selected: Set<string>; onToggleSelect: (id: string) => void;
 }) {
   const groups: Record<string, Card[]> = {};
   bills.forEach((b) => { const k = b.category || "Uncategorized"; (groups[k] = groups[k] || []).push(b); });
@@ -163,7 +208,7 @@ function BillsCategory({
             <div className="bcat-head"><span className="bcat-name">{k}</span><span className="bcat-sum mono">{money(sum)}</span></div>
             <div className="brow brow-h"><span /><span>Bill</span><span /><span>Notes</span><span>Due Date</span><span>Amount Due</span><span>Amount Paid</span><span /></div>
             {items.map((b) => (
-              <BillsRow key={b.id} b={b} onUpdate={onUpdate} onOpen={onOpen} hideCat selected={selected.has(b.id)} onToggleSelect={onToggleSelect} />
+              <BillsRow key={b.id} b={b} onUpdate={onUpdate} onTogglePaid={onTogglePaid} onOpen={onOpen} hideCat selected={selected.has(b.id)} onToggleSelect={onToggleSelect} />
             ))}
           </div>
         );
@@ -192,7 +237,7 @@ function BillsBalance({ total, paidSum, dueSum, paidCount, count }: { total: num
   );
 }
 
-function BillsCalendar({ vy, vm, bills, onUpdate, onOpen }: { vy: number; vm: number; bills: Card[]; onUpdate: (id: string, patch: Partial<Card>) => void; onOpen: (b: Card) => void }) {
+function BillsCalendar({ vy, vm, bills, onTogglePaid, onOpen }: { vy: number; vm: number; bills: Card[]; onTogglePaid: (b: Card) => void; onOpen: (b: Card) => void }) {
   const byDay: Record<number, Card[]> = {};
   bills.forEach((b) => {
     const p = parseISO(b.date);
@@ -219,7 +264,7 @@ function BillsCalendar({ vy, vm, bills, onUpdate, onOpen }: { vy: number; vm: nu
               {d != null ? <span className="bcal-date mono">{d}</span> : null}
               {items.map((b) => (
                 <div key={b.id} className={"bcal-bill" + (b.paid ? " paid" : "")} style={{ "--hue": typeMeta("bill").hue } as React.CSSProperties} title={b.title + " · " + money(b.amount)}>
-                  <button className={"bcal-dot" + (b.paid ? " on" : "")} title={b.paid ? "Paid" : "Mark paid"} onClick={(e) => { if (!b.paid) fx.coin(e.currentTarget); onUpdate(b.id, { paid: !b.paid }); }} />
+                  <button className={"bcal-dot" + (b.paid ? " on" : "")} title={b.paid ? "Paid" : "Mark paid"} onClick={(e) => { if (!b.paid) fx.coin(e.currentTarget); onTogglePaid(b); }} />
                   <span className="bcal-bill-name" onClick={() => onOpen(b)}>{b.title}</span>
                   <span className="bcal-bill-amt mono">{money(b.amount)}</span>
                 </div>
@@ -278,12 +323,35 @@ export function BillsView({
   const [sortBy, setSortBy] = useState<SortKey>("date");
   const [subSort, setSubSort] = useState<SortKey>("date");
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [search, setSearch] = useState("");
+  const [hidePaid, setHidePaid] = useState(false);
+  const [undoInfo, setUndoInfo] = useState<{ id: string; title: string } | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function toggleSelect(id: string) {
     setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   }
   function prevMonth() { if (vm === 0) { setVm(11); setVy(vy - 1); } else setVm(vm - 1); }
   function nextMonth() { if (vm === 11) { setVm(0); setVy(vy + 1); } else setVm(vm + 1); }
+
+  function togglePaid(b: Card) {
+    const nextPaid = !b.paid;
+    onUpdate(b.id, { paid: nextPaid });
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    if (nextPaid) {
+      setUndoInfo({ id: b.id, title: b.title });
+      undoTimer.current = setTimeout(() => setUndoInfo(null), 6000);
+    } else if (undoInfo?.id === b.id) {
+      setUndoInfo(null);
+    }
+  }
+  function undoLastPaid() {
+    if (!undoInfo) return;
+    onUpdate(undoInfo.id, { paid: false });
+    setUndoInfo(null);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+  }
+  useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
 
   const allBills = useMemo(() => {
     const out: Card[] = [];
@@ -303,6 +371,19 @@ export function BillsView({
   const dueSum = unpaid.reduce((a, c) => a + Number(c.amount || 0), 0);
   const paidSum = total - dueSum;
   const paidCount = bills.length - unpaid.length;
+
+  // Search/hide-paid narrow what's displayed without touching the month
+  // totals above, which should keep reflecting the whole month.
+  const visibleBills = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return bills.filter((b) => {
+      if (hidePaid && b.paid) return false;
+      if (!q) return true;
+      return (b.title || "").toLowerCase().includes(q)
+        || (b.category || "").toLowerCase().includes(q)
+        || (b.notes || "").toLowerCase().includes(q);
+    });
+  }, [bills, hidePaid, search]);
 
   useEffect(() => { setSelected(new Set()); }, [vy, vm, layout]);
 
@@ -328,6 +409,16 @@ export function BillsView({
         <span className="bmonth-label">{BMON[vm]} <span className="mono">{vy}</span></span>
         <button className="bmonth-nav" onClick={nextMonth} title="Next month">›</button>
         <div className="bmonth-ext">
+          <input
+            className="bsearch"
+            type="search"
+            placeholder="Search bills…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <button className={"filter-chip" + (hidePaid ? " active" : "")} onClick={() => setHidePaid((v) => !v)}>
+            Hide paid
+          </button>
           {layout !== "Calendar" ? (
             <select className="bsort" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} title="Sort bills">
               <option value="date">Sort: Due date</option>
@@ -368,15 +459,23 @@ export function BillsView({
       ) : null}
       {bills.length === 0 ? (
         <div className="bills-empty">No bills in {BMON[vm]} {vy}. Use the arrows to change month, or "+ Add bill".</div>
+      ) : visibleBills.length === 0 ? (
+        <div className="bills-empty">No bills match your search or filters.</div>
       ) : layout === "Calendar" ? (
-        <BillsCalendar vy={vy} vm={vm} bills={bills} onUpdate={onUpdate} onOpen={onOpen} />
+        <BillsCalendar vy={vy} vm={vm} bills={visibleBills} onTogglePaid={togglePaid} onOpen={onOpen} />
       ) : layout === "Cards" ? (
-        <BillsCards bills={bills} sortBy={sortBy} subSort={subSort} onOpen={onOpen} />
+        <BillsCards bills={visibleBills} sortBy={sortBy} subSort={subSort} onOpen={onOpen} />
       ) : layout === "Category" ? (
-        <BillsCategory bills={bills} sortBy={sortBy} subSort={subSort} onUpdate={onUpdate} onOpen={onOpen} selected={selected} onToggleSelect={toggleSelect} />
+        <BillsCategory bills={visibleBills} sortBy={sortBy} subSort={subSort} onUpdate={onUpdate} onTogglePaid={togglePaid} onOpen={onOpen} selected={selected} onToggleSelect={toggleSelect} />
       ) : (
-        <BillsList bills={bills} sortBy={sortBy} subSort={subSort} onUpdate={onUpdate} onOpen={onOpen} selected={selected} onToggleSelect={toggleSelect} />
+        <BillsList bills={visibleBills} sortBy={sortBy} subSort={subSort} onUpdate={onUpdate} onTogglePaid={togglePaid} onOpen={onOpen} selected={selected} onToggleSelect={toggleSelect} />
       )}
+      {undoInfo ? (
+        <div className="bundo">
+          <span>Marked &ldquo;{undoInfo.title}&rdquo; paid.</span>
+          <button className="bundo-btn" onClick={undoLastPaid}>Undo</button>
+        </div>
+      ) : null}
     </div>
   );
 }

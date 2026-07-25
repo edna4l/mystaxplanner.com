@@ -21,6 +21,22 @@ export function isDueSoon(b: Card) {
   return diff >= 0 && diff <= 3;
 }
 
+// "Due today"/"Due tomorrow"/"Due in Nd" — used wherever "Due soon" was
+// previously shown as a bare label, so the badge itself answers "how soon."
+export function dueInLabel(b: Card): string | null {
+  if (b.paid) return null;
+  const p = parseISO(b.date);
+  if (!p) return null;
+  const d = new Date(p.y, p.m, p.d);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
+  if (diff < 0) return null;
+  if (diff === 0) return "Due today";
+  if (diff === 1) return "Due tomorrow";
+  return `Due in ${diff}d`;
+}
+
 // "Past due" for anything overdue within the current calendar month;
 // "N months past due" once a full calendar month boundary has passed —
 // matches how people actually talk about a bill they've missed.
