@@ -1040,6 +1040,7 @@ input, textarea { font-family: inherit; }
 .body { display: flex; flex-direction: column; gap: 16px; padding-top: 12px; }
 .body-row { display: flex; align-items: center; gap: 10px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
+.series-scope { background: color-mix(in oklab, var(--ink) 5%, transparent); border: 1px solid var(--faint); border-radius: 12px; padding: 10px 12px; }
 .field-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 .inp {
   width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--ink);

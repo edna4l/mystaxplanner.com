@@ -59,7 +59,19 @@ function Checklist({ items, onChange }: { items: Card["checklist"]; onChange: (v
   );
 }
 
-function ExpandedBody({ card, onUpdate }: { card: Card; onUpdate: (patch: Partial<Card>) => void }) {
+function ExpandedBody({
+  card, onUpdate, isSeriesMember, onUpdateSeries,
+}: {
+  card: Card;
+  onUpdate: (patch: Partial<Card>) => void;
+  isSeriesMember?: boolean;
+  onUpdateSeries?: (patch: Partial<Card>) => void;
+}) {
+  const [applyToSeries, setApplyToSeries] = useState(false);
+  function updateAccountField(patch: Partial<Card>) {
+    if (applyToSeries && onUpdateSeries) onUpdateSeries(patch);
+    else onUpdate(patch);
+  }
   if (card.type === "habit") {
     const days = card.days || [];
     const todayIdx = days.length - 1;
@@ -150,26 +162,35 @@ function ExpandedBody({ card, onUpdate }: { card: Card; onUpdate: (patch: Partia
             <input className="inp" type="date" value={card.recur_until || ""} onChange={(e) => onUpdate({ recur_until: e.target.value || null })} />
           </label>
         ) : null}
+        {isSeriesMember && onUpdateSeries ? (
+          <label className="field series-scope">
+            <span className="field-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input type="checkbox" checked={applyToSeries} onChange={(e) => setApplyToSeries(e.target.checked)} />
+              Update all occurrences after this
+            </span>
+            <span className="ob-hint">Applies to autopay, last 4 digits, payment website, category, and notes below — the account details, not the amount or due date, which stay specific to each occurrence.</span>
+          </label>
+        ) : null}
         <label className="field">
           <span className="field-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <input type="checkbox" checked={!!card.autopay} onChange={(e) => onUpdate({ autopay: e.target.checked })} />
+            <input type="checkbox" checked={!!card.autopay} onChange={(e) => updateAccountField({ autopay: e.target.checked })} />
             Autopay enabled
           </span>
         </label>
         <div className="two">
           <label className="field"><span className="field-label">Last 4 digits (optional)</span>
             <input className="inp" maxLength={4} inputMode="numeric" placeholder="e.g. 4321"
-              value={card.last4 || ""} onChange={(e) => onUpdate({ last4: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
+              value={card.last4 || ""} onChange={(e) => updateAccountField({ last4: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
           </label>
           <label className="field"><span className="field-label">Payment website</span>
-            <input className="inp" type="url" placeholder="e.g. chase.com" value={card.pay_url || ""} onChange={(e) => onUpdate({ pay_url: e.target.value })} />
+            <input className="inp" type="url" placeholder="e.g. chase.com" value={card.pay_url || ""} onChange={(e) => updateAccountField({ pay_url: e.target.value })} />
           </label>
         </div>
         <label className="field"><span className="field-label">Category</span>
-          <input className="inp" value={card.category || ""} onChange={(e) => onUpdate({ category: e.target.value })} />
+          <input className="inp" value={card.category || ""} onChange={(e) => updateAccountField({ category: e.target.value })} />
         </label>
         <label className="field"><span className="field-label">Notes</span>
-          <input className="inp" value={card.notes || ""} onChange={(e) => onUpdate({ notes: e.target.value })} />
+          <input className="inp" value={card.notes || ""} onChange={(e) => updateAccountField({ notes: e.target.value })} />
         </label>
         <SensitiveWarning text={card.notes} />
         <label className="field"><span className="field-label">Calendar date</span>
@@ -219,6 +240,7 @@ export function ExpandedCard({
   card,
   onClose,
   onUpdate,
+  onUpdateSeries,
   onDelete,
   series,
   onSplitSeries,
@@ -229,6 +251,7 @@ export function ExpandedCard({
   card: Card;
   onClose: () => void;
   onUpdate: (patch: Partial<Card>) => void;
+  onUpdateSeries?: (patch: Partial<Card>) => void;
   onDelete: () => void;
   series?: { isRoot: boolean } | null;
   onSplitSeries?: () => void;
@@ -255,7 +278,7 @@ export function ExpandedCard({
           placeholder="Untitled"
         />
         <CoverPicker card={card} onUpdate={onUpdate} />
-        <ExpandedBody card={card} onUpdate={onUpdate} />
+        <ExpandedBody card={card} onUpdate={onUpdate} isSeriesMember={!!series} onUpdateSeries={onUpdateSeries} />
         {series ? (
           <div className="series-actions">
             {!series.isRoot ? (

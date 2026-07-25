@@ -158,6 +158,33 @@ export default function HomeClient() {
     await updateCard(id, patch);
   }
 
+  // "Update all occurrences after this" (ExpandedCard, bill series only)
+  // — account-level fields (autopay/last4/pay_url/category/notes) describe
+  // the account, not a specific month, so this applies the patch to the
+  // series root (which every not-yet-materialized future month generates
+  // from) plus every already-materialized occurrence at or after this
+  // one's date, instead of leaving them stuck with whatever they had at
+  // materialize time. Past occurrences are left untouched.
+  async function handleUpdateSeries(card: Card, patch: Partial<Card>) {
+    let root: Card | null = card.recur_freq ? card : null;
+    if (!root && card.origin) {
+      board.forEach((s) => s.cards.forEach((c) => { if (c.id === card.origin) root = c; }));
+    }
+    if (!root) { handleUpdateCard(card.id, patch); return; }
+    const cutoff = (root as Card).id === card.id ? null : (card.occurrence_date || card.date);
+
+    await updateCard((root as Card).id, patch);
+
+    const siblings: Card[] = [];
+    board.forEach((s) => s.cards.forEach((c) => { if (c.origin === (root as Card).id) siblings.push(c); }));
+    const toUpdate = siblings.filter((c) => {
+      if (!cutoff) return true;
+      const d = c.occurrence_date || c.date || "";
+      return d >= cutoff;
+    });
+    await Promise.all(toUpdate.map((c) => updateCard(c.id, patch)));
+  }
+
   async function handleAdd(type: string) {
     const card = await addCard(type, pendingDate ?? undefined);
     setAddOpen(false);
@@ -408,6 +435,7 @@ export default function HomeClient() {
           card={openCard}
           onClose={() => setOpen(null)}
           onUpdate={(patch) => handleUpdateCard(openCard.id, patch)}
+          onUpdateSeries={openCardSeries ? (patch) => handleUpdateSeries(openCard, patch) : undefined}
           onDelete={handleDeleteCard}
           series={openCardSeries}
           onSplitSeries={handleSplitSeries}
