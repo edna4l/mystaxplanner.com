@@ -12,6 +12,7 @@ import { PlannerIndex } from "@/components/planner-index";
 import { PlannerPlan } from "@/components/planner-plan";
 import { PlannerFocus } from "@/components/planner-focus";
 import { PlannerWork } from "@/components/planner-work";
+import { PlannerFinance } from "@/components/planner-finance";
 
 export type PlannerTab = "index" | "focus" | "plan" | "work" | "finance" | "wellness" | "home" | "notes";
 
@@ -76,6 +77,8 @@ export function PlannerView({
           <PlannerFocus board={board} onOpenCard={onOpenCard} onStartFocusDeck={onStartFocusDeck} onOpenDailyReset={onOpenDailyReset} />
         ) : tab === "work" ? (
           <PlannerWork board={board} onOpenCard={onOpenCard} onUpdateCard={onUpdateCard} />
+        ) : tab === "finance" ? (
+          <PlannerFinance board={board} onGo={() => onGo("bills")} />
         ) : (
           <ComingSoon label={active.label} hue={active.hue} />
         )}
