@@ -237,7 +237,12 @@ function BillsBalance({ total, paidSum, dueSum, paidCount, count }: { total: num
   );
 }
 
-function BillsCalendar({ vy, vm, bills, onTogglePaid, onOpen }: { vy: number; vm: number; bills: Card[]; onTogglePaid: (b: Card) => void; onOpen: (b: Card) => void }) {
+function BillsCalendar({
+  vy, vm, bills, rootAmountById, onTogglePaid, onOpen,
+}: {
+  vy: number; vm: number; bills: Card[]; rootAmountById: Map<string, number>;
+  onTogglePaid: (b: Card) => void; onOpen: (b: Card) => void;
+}) {
   const byDay: Record<number, Card[]> = {};
   bills.forEach((b) => {
     const p = parseISO(b.date);
@@ -262,13 +267,27 @@ function BillsCalendar({ vy, vm, bills, onTogglePaid, onOpen }: { vy: number; vm
           return (
             <div key={i} className={"bcal-cell" + (d == null ? " empty" : "") + (d && isToday(d) ? " today" : "")}>
               {d != null ? <span className="bcal-date mono">{d}</span> : null}
-              {items.map((b) => (
-                <div key={b.id} className={"bcal-bill" + (b.paid ? " paid" : "")} style={{ "--hue": typeMeta("bill").hue } as React.CSSProperties} title={b.title + " · " + money(b.amount)}>
-                  <button className={"bcal-dot" + (b.paid ? " on" : "")} title={b.paid ? "Paid" : "Mark paid"} onClick={(e) => { if (!b.paid) fx.coin(e.currentTarget); onTogglePaid(b); }} />
-                  <span className="bcal-bill-name" onClick={() => onOpen(b)}>{b.title}</span>
-                  <span className="bcal-bill-amt mono">{money(b.amount)}</span>
-                </div>
-              ))}
+              {items.map((b) => {
+                const overdue = overdueLabel(b);
+                const soon = !overdue && isDueSoon(b);
+                const changed = !!(b.origin && rootAmountById.has(b.origin) && Number(b.amount || 0) !== rootAmountById.get(b.origin));
+                const statusCls = b.paid ? "paid" : overdue ? "overdue" : soon ? "soon" : "";
+                const statusLabel = b.paid ? "Paid" : overdue || (soon ? dueInLabel(b) : null);
+                const titleParts = [b.title, money(b.amount), statusLabel, b.autopay ? "Autopay" : null, changed ? "Amount changed from usual" : null].filter(Boolean);
+                return (
+                  <div key={b.id} className={"bcal-bill" + (statusCls ? " " + statusCls : "")} style={{ "--hue": typeMeta("bill").hue } as React.CSSProperties} title={titleParts.join(" · ")}>
+                    <button className={"bcal-dot" + (b.paid ? " on" : "")} title={b.paid ? "Paid" : "Mark paid"} onClick={(e) => { if (!b.paid) fx.coin(e.currentTarget); onTogglePaid(b); }} />
+                    <span className="bcal-bill-name" onClick={() => onOpen(b)}>{b.title}</span>
+                    <span className="bcal-bill-icons">
+                      {statusCls === "overdue" ? <span className="bcal-icon bcal-icon-overdue" aria-hidden="true">!</span> : null}
+                      {statusCls === "soon" ? <span className="bcal-icon bcal-icon-soon" aria-hidden="true">⏱</span> : null}
+                      {b.autopay ? <span className="bcal-icon" aria-hidden="true">↻</span> : null}
+                      {changed ? <span className="bcal-icon" aria-hidden="true">~</span> : null}
+                    </span>
+                    <span className="bcal-bill-amt mono">{money(b.amount)}</span>
+                  </div>
+                );
+              })}
             </div>
           );
         })}
@@ -358,6 +377,14 @@ export function BillsView({
     board.forEach((s) => s.cards.forEach((c) => { if (c.type === "bill") out.push(c); }));
     return out;
   }, [board]);
+
+  // Each recurring series' root amount, used to flag an occurrence whose
+  // amount was edited away from the usual (e.g. a variable utility bill).
+  const rootAmountById = useMemo(() => {
+    const m = new Map<string, number>();
+    allBills.forEach((c) => { if (!c.origin && c.recur_freq) m.set(c.id, Number(c.amount || 0)); });
+    return m;
+  }, [allBills]);
 
   const monthStart = toISODate(vy, vm, 1);
   const monthEnd = toISODate(vy, vm, new Date(vy, vm + 1, 0).getDate());
@@ -462,7 +489,7 @@ export function BillsView({
       ) : visibleBills.length === 0 ? (
         <div className="bills-empty">No bills match your search or filters.</div>
       ) : layout === "Calendar" ? (
-        <BillsCalendar vy={vy} vm={vm} bills={visibleBills} onTogglePaid={togglePaid} onOpen={onOpen} />
+        <BillsCalendar vy={vy} vm={vm} bills={visibleBills} rootAmountById={rootAmountById} onTogglePaid={togglePaid} onOpen={onOpen} />
       ) : layout === "Cards" ? (
         <BillsCards bills={visibleBills} sortBy={sortBy} subSort={subSort} onOpen={onOpen} />
       ) : layout === "Category" ? (

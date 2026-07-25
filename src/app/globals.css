@@ -440,12 +440,21 @@ input, textarea { font-family: inherit; }
 .bcal-cell.empty { background: color-mix(in oklab, var(--ink) 3%, var(--bg)); }
 .bcal-date { font-size: 12px; font-weight: 600; color: var(--muted); }
 .bcal-cell.today .bcal-date { color: var(--panel); background: oklch(var(--accent-L) var(--chroma) 72); border-radius: 999px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; }
-.bcal-bill { display: flex; align-items: center; gap: 5px; background: oklch(0.95 calc(var(--chroma) * 0.6) var(--hue)); border-radius: 6px; padding: 3px 5px; }
-.bcal-bill.paid { background: oklch(0.94 0.05 150); }
+/* Neutral by default; status classes below carry the actual meaning so
+   "due soon"/"overdue"/"paid" read as distinct states, not just a tint
+   every bill already has regardless of urgency. */
+.bcal-bill { display: flex; align-items: center; gap: 4px; background: color-mix(in oklab, var(--ink) 5%, var(--panel)); border: 1px solid var(--faint); border-radius: 6px; padding: 3px 5px; }
+.bcal-bill.soon { background: oklch(0.95 0.08 55); border-color: oklch(0.72 0.11 55); }
+.bcal-bill.overdue { background: oklch(0.94 0.09 25); border-color: oklch(0.68 0.15 25); }
+.bcal-bill.paid { background: oklch(0.94 0.05 150); border-color: oklch(0.75 0.08 150); }
 .bcal-dot { width: 12px; height: 12px; flex: none; border-radius: 50%; border: 2px solid color-mix(in oklab, oklch(0.55 0.12 72) 55%, var(--panel)); background: var(--panel); padding: 0; cursor: pointer; transition: all .14s ease; }
 .bcal-dot.on { background: oklch(0.55 0.12 150); border-color: oklch(0.55 0.12 150); }
 .bcal-bill-name { font-size: 11px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; flex: 1; min-width: 0; }
 .bcal-bill.paid .bcal-bill-name { color: var(--muted); text-decoration: line-through; }
+.bcal-bill-icons { display: flex; align-items: center; gap: 2px; flex: none; }
+.bcal-icon { font-size: 9px; line-height: 1; color: var(--muted); font-weight: 700; }
+.bcal-icon-overdue { color: oklch(0.5 0.18 25); }
+.bcal-icon-soon { color: oklch(0.5 0.13 55); }
 .bcal-bill-amt { font-size: 10px; font-weight: 700; color: var(--muted); flex: none; }
 @media (max-width: 640px) {
   .bcal-cell { min-height: 60px; }
