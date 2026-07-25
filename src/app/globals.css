@@ -89,6 +89,9 @@ input, textarea { font-family: inherit; }
 .head-right { justify-self: end; display: flex; align-items: center; gap: 10px; }
 .icon-toggle { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 17px; line-height: 1; display: grid; place-items: center; transition: all .14s ease; }
 .icon-toggle:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.icon-toggle:disabled { opacity: 0.6; cursor: default; }
+.icon-toggle-spin { animation: iconSpin .7s linear infinite; }
+@keyframes iconSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .quick-add-btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font-weight: 600; font-size: 13px; padding: 9px 12px 9px 14px; border-radius: 999px; transition: all .14s ease; }
 .quick-add-btn:hover { border-color: var(--ink); color: var(--ink); }
 .quick-add-btn .qa-plus { font-size: 15px; color: var(--ink); }

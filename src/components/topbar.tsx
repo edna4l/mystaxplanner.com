@@ -22,6 +22,8 @@ export function Topbar({
   onSearch,
   onToggleDark,
   onOpenSettings,
+  onSyncNow,
+  syncing,
 }: {
   greeting: string;
   dateStr: string;
@@ -37,6 +39,8 @@ export function Topbar({
   onSearch: () => void;
   onToggleDark: () => void;
   onOpenSettings: () => void;
+  onSyncNow: () => void;
+  syncing: boolean;
 }) {
   // Types with their own dedicated tab (Bills) are excluded from the
   // section-chip row — clicking them would just duplicate the Bills tab.
@@ -57,6 +61,14 @@ export function Topbar({
           <button className="icon-toggle" title="Search (Ctrl/Cmd+K)" onClick={onSearch}>⌕</button>
           <button className="quick-add-btn" onClick={onQuickAdd} title="Quick add (press /)">
             <span className="qa-plus">+</span><span className="qa-label">Quick add</span><span className="qa-key mono">/</span>
+          </button>
+          <button
+            className={"icon-toggle" + (syncing ? " icon-toggle-spin" : "")}
+            title="Sync now — pull the latest changes from your other devices"
+            onClick={onSyncNow}
+            disabled={syncing}
+          >
+            ⟳
           </button>
           <button className="icon-toggle" title={dark ? "Switch to light" : "Switch to dark"} onClick={onToggleDark}>
             {dark ? "☀" : "☾"}
@@ -81,6 +93,9 @@ export function Topbar({
                 </button>
                 <button className="mobile-menu-row" onClick={() => { setMenuOpen(false); onAdd(); }}>
                   <span className="mobile-menu-icon">+</span>New card
+                </button>
+                <button className="mobile-menu-row" onClick={() => { setMenuOpen(false); onSyncNow(); }} disabled={syncing}>
+                  <span className="mobile-menu-icon">⟳</span>Sync now
                 </button>
                 <button className="mobile-menu-row" onClick={() => { setMenuOpen(false); onToggleDark(); }}>
                   <span className="mobile-menu-icon">{dark ? "☀" : "☾"}</span>{dark ? "Light mode" : "Dark mode"}

@@ -134,6 +134,26 @@ export function applyTheme(t: Tweaks) {
   } else {
     r.style.setProperty("--accent-ink-L", "0.43");
   }
+
+  // Caches just enough to repaint the right background instantly on the
+  // next load, before this function even runs again — see the
+  // beforeInteractive script in app/layout.tsx that reads this. Without
+  // it, every full page load briefly shows the light-mode background
+  // (globals.css's :root default) even for a Dark-mode user, until this
+  // function runs — a bright flash that's a real problem for anyone
+  // light-sensitive, not just an aesthetic nitpick.
+  try {
+    localStorage.setItem("stax-theme-cache", JSON.stringify({
+      bg: r.style.getPropertyValue("--bg"),
+      ink: r.style.getPropertyValue("--ink"),
+      panel: r.style.getPropertyValue("--panel"),
+      line: r.style.getPropertyValue("--line"),
+      dark,
+    }));
+  } catch {
+    // Private-browsing / storage-disabled — the flash just isn't
+    // prevented for this user, nothing else depends on this cache.
+  }
 }
 
 // Overrides a built-in type's hue by re-registering it in the same

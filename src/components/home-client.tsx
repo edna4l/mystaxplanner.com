@@ -39,11 +39,11 @@ export default function HomeClient() {
     stampCard, bulkDeleteBills, bulkMarkBills, applyCardOrder, restoreCards,
     materializeOccurrence, skipOccurrence, unskipOccurrence, stopRecurrence, splitSeriesFrom,
     createCustomType, updateCustomType, deleteCustomType,
-    errorMsg: boardError, clearError: clearBoardError,
+    errorMsg: boardError, clearError: clearBoardError, reload: reloadBoard,
   } = useBoard();
   const {
     profile, loading: profileLoading, updateProfile, updateTweaks,
-    errorMsg: profileError, clearError: clearProfileError,
+    errorMsg: profileError, clearError: clearProfileError, reload: reloadProfile,
   } = useProfile();
   const [view, setView] = useState<AppView>("today");
   const [sectionType, setSectionType] = useState<string | null>(null);
@@ -51,6 +51,17 @@ export default function HomeClient() {
   const [addOpen, setAddOpen] = useState(false);
   const [pendingDate, setPendingDate] = useState<string | null>(null);
   const [editTypeKey, setEditTypeKey] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  // Manual fallback for realtime sync — mainly useful right after making
+  // a change on another device, when you don't want to wait out the
+  // debounce or aren't sure the subscription caught it.
+  async function handleSyncNow() {
+    setSyncing(true);
+    await Promise.all([reloadBoard(), reloadProfile()]);
+    setSyncing(false);
+    setToast({ msg: "Synced", cards: [], skips: [] });
+  }
   const [quickOpen, setQuickOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -381,6 +392,8 @@ export default function HomeClient() {
         onSearch={() => setSearchOpen(true)}
         onToggleDark={() => updateTweaks({ appearance: dark ? "Light" : "Dark" })}
         onOpenSettings={() => setSettingsOpen(true)}
+        onSyncNow={handleSyncNow}
+        syncing={syncing}
       />
 
       {view === "today" ? (
