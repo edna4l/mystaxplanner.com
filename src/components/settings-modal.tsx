@@ -11,6 +11,7 @@ import type { Tweaks } from "@/lib/theme";
 import { APPEARANCE_PRESETS, ACCENTS, applyBrand } from "@/lib/theme";
 import { BUILTIN_CARD_TYPES } from "@/lib/cardTypes";
 import { AvatarEdit } from "@/components/avatar";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 export function PresetGrid({ current, onPick }: { current: string | null; onPick: (p: (typeof APPEARANCE_PRESETS)[number]) => void }) {
   return (
@@ -97,6 +98,7 @@ export function SettingsModal({
   const [draft, setDraft] = useState({ name: profile.name, avatar: profile.avatar });
   const t = profile.tweaks;
   const dark = t.appearance === "Dark";
+  useEscapeKey(onClose);
 
   function pickPreset(p: (typeof APPEARANCE_PRESETS)[number]) {
     onSaveProfile({ preset_id: p.id });

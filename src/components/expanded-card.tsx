@@ -8,6 +8,7 @@ import type { Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
 import { CoverPicker } from "@/components/cover-picker";
 import { SensitiveWarning } from "@/components/sensitive-warning";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 import * as fx from "@/lib/fx";
 
 function pct(checklist: Card["checklist"]) {
@@ -222,6 +223,7 @@ export function ExpandedCard({
   onRestoreOccurrence?: (id: string) => void;
 }) {
   const T = typeMeta(card.type);
+  useEscapeKey(onClose);
   return (
     <div className="overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="panel" style={{ "--hue": T.hue } as React.CSSProperties} onMouseDown={(e) => e.stopPropagation()}>

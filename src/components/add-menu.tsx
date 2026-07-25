@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { BUILTIN_CARD_TYPES } from "@/lib/cardTypes";
 import type { CardTypeDef } from "@/lib/types";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 const CUSTOM_HUES = [200, 265, 330, 16, 48, 128, 178, 290];
 
@@ -22,6 +23,7 @@ export function AddMenu({
   const [mode, setMode] = useState<"list" | "create">("list");
   const [name, setName] = useState("");
   const [hue, setHue] = useState(CUSTOM_HUES[0]);
+  useEscapeKey(onClose);
 
   function create() {
     const n = name.trim();
@@ -101,6 +103,7 @@ export function EditTypeModal({
 }) {
   const [name, setName] = useState(typeDef.label);
   const [hue, setHue] = useState(typeDef.hue);
+  useEscapeKey(onClose);
   function save() {
     const n = name.trim();
     if (!n) return;

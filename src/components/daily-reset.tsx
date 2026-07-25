@@ -15,6 +15,7 @@ import { todayISO } from "@/lib/date";
 import { overdueLabel } from "@/lib/bills";
 import { markHabitDoneToday } from "@/lib/habits";
 import { canComplete, completionPatch } from "@/lib/cardActions";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 function headlineFor(remaining: number, tomorrowCount: number, anyProgress: boolean): { title: string; sub: string } {
   if (remaining === 0) {
@@ -112,6 +113,7 @@ export function DailyReset({
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
   const [tomorrowCount, setTomorrowCount] = useState(0);
   const [actioned, setActioned] = useState(false);
+  useEscapeKey(onClose);
 
   const visible = unfinished.filter((c) => !hiddenIds.has(c.id));
   const { title, sub } = headlineFor(visible.length, tomorrowCount, actioned);

@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import type { Card } from "@/lib/types";
 import { SquareCard } from "@/components/square-card";
 import { sortCards, type CardSortKey } from "@/lib/sortCards";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 export function DayFan({
   title,
@@ -22,6 +23,7 @@ export function DayFan({
 }) {
   const [sortBy, setSortBy] = useState<CardSortKey>("date");
   const sorted = useMemo(() => sortCards(cards, sortBy), [cards, sortBy]);
+  useEscapeKey(onClose);
 
   return (
     <div className="overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>

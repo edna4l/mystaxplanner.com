@@ -17,6 +17,7 @@ import { money, shortISO, todayISO } from "@/lib/date";
 import { overdueLabel } from "@/lib/bills";
 import { markHabitDoneToday } from "@/lib/habits";
 import { completionPatch, opensCardInstead, primaryActionLabel } from "@/lib/cardActions";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 import * as fx from "@/lib/fx";
 
 type TallyKey = "paid" | "reviewed" | "completed" | "doneToday" | "rescheduled" | "skipped";
@@ -108,6 +109,7 @@ export function FocusDeck({
     if (exitTimer.current) clearTimeout(exitTimer.current);
     if (actionTimer.current) clearTimeout(actionTimer.current);
   }, []);
+  useEscapeKey(onClose);
 
   const card = queue[index];
 

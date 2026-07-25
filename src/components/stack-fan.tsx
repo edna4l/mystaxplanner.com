@@ -4,6 +4,7 @@
 // lets you open one or pop it out; drag-to-reorder/drag-out isn't ported.
 import type { BoardSlot, Card } from "@/lib/types";
 import { SquareCard } from "@/components/square-card";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 export function StackFan({
   slot,
@@ -18,6 +19,7 @@ export function StackFan({
   onUnstack: (cardId: string) => void;
   onUngroup: () => void;
 }) {
+  useEscapeKey(onClose);
   return (
     <div className="overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="fan" onMouseDown={(e) => e.stopPropagation()}>
