@@ -39,8 +39,12 @@ export default function HomeClient() {
     stampCard, bulkDeleteBills, bulkMarkBills, applyCardOrder, restoreCards,
     materializeOccurrence, skipOccurrence, unskipOccurrence, stopRecurrence, splitSeriesFrom,
     createCustomType, updateCustomType, deleteCustomType,
+    errorMsg: boardError, clearError: clearBoardError,
   } = useBoard();
-  const { profile, loading: profileLoading, updateProfile, updateTweaks } = useProfile();
+  const {
+    profile, loading: profileLoading, updateProfile, updateTweaks,
+    errorMsg: profileError, clearError: clearProfileError,
+  } = useProfile();
   const [view, setView] = useState<AppView>("today");
   const [sectionType, setSectionType] = useState<string | null>(null);
   const [open, setOpen] = useState<Open>(null);
@@ -501,7 +505,13 @@ export default function HomeClient() {
         />
       ) : null}
 
-      {toast ? (
+      {boardError || profileError ? (
+        <Toast
+          msg={(boardError || profileError) as string}
+          variant="error"
+          onDismiss={() => { clearBoardError(); clearProfileError(); }}
+        />
+      ) : toast ? (
         <Toast
           msg={toast.msg}
           actionLabel={toast.cards.length || toast.skips.length ? "Undo" : undefined}

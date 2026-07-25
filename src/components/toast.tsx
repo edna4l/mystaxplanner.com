@@ -4,14 +4,17 @@
 import { useEffect } from "react";
 
 export function Toast({
-  msg, actionLabel, onAction, onDismiss,
-}: { msg: string; actionLabel?: string; onAction?: () => void; onDismiss: () => void }) {
+  msg, actionLabel, onAction, onDismiss, variant = "default",
+}: { msg: string; actionLabel?: string; onAction?: () => void; onDismiss: () => void; variant?: "default" | "error" }) {
   useEffect(() => {
+    // Errors stay until dismissed — missing why a save failed is worse
+    // than a toast that lingers a bit too long.
+    if (variant === "error") return;
     const id = setTimeout(onDismiss, 6000);
     return () => clearTimeout(id);
-  }, [msg, onDismiss]);
+  }, [msg, onDismiss, variant]);
   return (
-    <div className="toast">
+    <div className={"toast" + (variant === "error" ? " toast-error" : "")}>
       <span className="toast-msg">{msg}</span>
       {actionLabel && onAction ? (
         <button className="toast-action" onClick={() => { onAction(); onDismiss(); }}>{actionLabel}</button>

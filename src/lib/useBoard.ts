@@ -31,6 +31,17 @@ export function useBoard() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [customTypes, setCustomTypes] = useState<CardTypeDef[]>([]);
+  // Every mutation below updates local state optimistically before the
+  // Supabase write resolves, so the UI feels instant — but until now,
+  // nothing checked whether that write actually succeeded. A failed
+  // write silently left the UI showing a change that was never saved.
+  // reportError surfaces it; the caller then re-syncs from the server
+  // (see reload() below) since the optimistic state is no longer
+  // trustworthy once a write is known to have failed.
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  function reportError(action: string) {
+    setErrorMsg(`Couldn't ${action}. Check your connection and try again.`);
+  }
 
   const reload = useCallback(async () => {
     const {
@@ -69,7 +80,7 @@ export function useBoard() {
       .insert({ user_id: userId, name: "" })
       .select()
       .single();
-    if (slotErr || !slot) return null;
+    if (slotErr || !slot) { reportError("add that card"); return null; }
 
     const fields = newCardFields(type);
     if (date) fields.date = date;
@@ -85,7 +96,7 @@ export function useBoard() {
       })
       .select()
       .single();
-    if (cardErr || !card) return null;
+    if (cardErr || !card) { reportError("add that card"); return null; }
 
     setBoard((b) => [{ ...slot, cards: [card as Card] }, ...b]);
     return card as Card;
@@ -98,9 +109,10 @@ export function useBoard() {
   async function restoreCards(cards: Card[]) {
     if (!userId || !cards.length) return;
     const created: { slot: Slot; card: Card }[] = [];
+    let failed = 0;
     for (const c of cards) {
       const { data: slot } = await supabase.from("slots").insert({ user_id: userId, name: "" }).select().single();
-      if (!slot) continue;
+      if (!slot) { failed++; continue; }
       const copyFields = { ...c } as Partial<Card>;
       delete copyFields.id;
       delete copyFields.created_at;
@@ -112,8 +124,10 @@ export function useBoard() {
         .select()
         .single();
       if (card) created.push({ slot, card: card as Card });
+      else failed++;
     }
     if (created.length) setBoard((b) => [...created.map((r) => ({ ...r.slot, cards: [r.card] })), ...b]);
+    if (failed) reportError(created.length ? "restore all of that undo" : "restore that");
   }
 
   // Turns a virtual recurring-bill occurrence (id shaped "virtual:<rootId>:<date>",
@@ -130,8 +144,8 @@ export function useBoard() {
     if (!root) return null;
     const r = root as Card;
 
-    const { data: slot } = await supabase.from("slots").insert({ user_id: userId, name: "" }).select().single();
-    if (!slot) return null;
+    const { data: slot, error: slotErr } = await supabase.from("slots").insert({ user_id: userId, name: "" }).select().single();
+    if (slotErr || !slot) { reportError("save that change"); return null; }
 
     const copyFields = { ...r } as Partial<Card>;
     delete copyFields.id;
@@ -141,7 +155,7 @@ export function useBoard() {
     delete copyFields.recur_freq;
     delete copyFields.recur_until;
 
-    const { data: card } = await supabase
+    const { data: card, error: cardErr } = await supabase
       .from("cards")
       .insert({
         ...copyFields,
@@ -158,7 +172,7 @@ export function useBoard() {
       })
       .select()
       .single();
-    if (!card) return null;
+    if (cardErr || !card) { reportError("save that change"); return null; }
 
     setBoard((b) => [{ ...slot, cards: [card as Card] }, ...b]);
     return card as Card;
@@ -181,7 +195,8 @@ export function useBoard() {
       return card ? { id: card.id, wasVirtual: true } : null;
     }
     setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (c.id === id ? { ...c, skipped: true } : c)) })));
-    await supabase.from("cards").update({ skipped: true }).eq("id", id);
+    const { error } = await supabase.from("cards").update({ skipped: true }).eq("id", id);
+    if (error) { reportError("skip that"); reload(); return null; }
     return { id, wasVirtual: false };
   }
 
@@ -194,12 +209,14 @@ export function useBoard() {
       let slotId: string | null = null;
       board.forEach((s) => s.cards.forEach((c) => { if (c.id === id) slotId = c.slot_id; }));
       setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.filter((c) => c.id !== id) })).filter((s) => s.cards.length > 0));
-      await supabase.from("cards").delete().eq("id", id);
+      const { error } = await supabase.from("cards").delete().eq("id", id);
+      if (error) { reportError("undo that skip"); reload(); return; }
       if (slotId) await supabase.from("slots").delete().eq("id", slotId);
       return;
     }
     setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (c.id === id ? { ...c, skipped: false } : c)) })));
-    await supabase.from("cards").update({ skipped: false }).eq("id", id);
+    const { error } = await supabase.from("cards").update({ skipped: false }).eq("id", id);
+    if (error) { reportError("undo that skip"); reload(); }
   }
 
   // Ends a series so nothing generates after the given occurrence — the
@@ -233,7 +250,8 @@ export function useBoard() {
     const r = root as Card;
 
     setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (c.id === r.id ? { ...c, recur_until: stopDate } : c)) })));
-    await supabase.from("cards").update({ recur_until: stopDate }).eq("id", r.id);
+    const { error } = await supabase.from("cards").update({ recur_until: stopDate }).eq("id", r.id);
+    if (error) { reportError("stop that series"); reload(); }
   }
 
   // "Edit this and future occurrences": caps the existing series the day
@@ -264,24 +282,26 @@ export function useBoard() {
     const oldUntil = r.recur_until;
     const dayBefore = addDaysISO(occurrenceDate, -1);
 
-    await supabase.from("cards").update({ recur_until: dayBefore }).eq("id", r.id);
+    const { error: capErr } = await supabase.from("cards").update({ recur_until: dayBefore }).eq("id", r.id);
+    if (capErr) { reportError("split that series"); reload(); return null; }
     setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (c.id === r.id ? { ...c, recur_until: dayBefore } : c)) })));
 
     let newRoot: Card;
     if (existingRow) {
       const updates: Partial<Card> = { origin: null, recur_freq: r.recur_freq, recur_until: oldUntil, occurrence_date: null };
-      await supabase.from("cards").update(updates).eq("id", (existingRow as Card).id);
+      const { error } = await supabase.from("cards").update(updates).eq("id", (existingRow as Card).id);
+      if (error) { reportError("split that series"); reload(); return null; }
       newRoot = { ...(existingRow as Card), ...updates };
       setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (c.id === newRoot.id ? newRoot : c)) })));
     } else {
-      const { data: slot } = await supabase.from("slots").insert({ user_id: userId, name: "" }).select().single();
-      if (!slot) return null;
+      const { data: slot, error: slotErr } = await supabase.from("slots").insert({ user_id: userId, name: "" }).select().single();
+      if (slotErr || !slot) { reportError("split that series"); reload(); return null; }
       const copyFields = { ...r } as Partial<Card>;
       delete copyFields.id;
       delete copyFields.created_at;
       delete copyFields.updated_at;
       delete copyFields.slot_id;
-      const { data: card } = await supabase
+      const { data: card, error: cardErr } = await supabase
         .from("cards")
         .insert({
           ...copyFields,
@@ -299,7 +319,7 @@ export function useBoard() {
         })
         .select()
         .single();
-      if (!card) return null;
+      if (cardErr || !card) { reportError("split that series"); reload(); return null; }
       newRoot = card as Card;
       setBoard((b) => [{ ...slot, cards: [newRoot] }, ...b]);
     }
@@ -312,7 +332,8 @@ export function useBoard() {
     }));
     if (laterExceptions.length) {
       const ids = laterExceptions.map((c) => c.id);
-      await supabase.from("cards").update({ origin: newRoot.id }).in("id", ids);
+      const { error } = await supabase.from("cards").update({ origin: newRoot.id }).in("id", ids);
+      if (error) { reportError("move that series' later occurrences"); reload(); return newRoot; }
       setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (ids.includes(c.id) ? { ...c, origin: newRoot.id } : c)) })));
     }
 
@@ -326,7 +347,7 @@ export function useBoard() {
     const key = "ctype_" + crypto.randomUUID().slice(0, 8);
     const def: CardTypeDef = { key, label, hue, blurb: "Custom", custom: true };
     const { error } = await supabase.from("card_types").insert({ user_id: userId, key, label, hue, blurb: "Custom" });
-    if (error) return null;
+    if (error) { reportError("create that type"); return null; }
     registerCardType(def);
     setCustomTypes((p) => [...p, def]);
     return key;
@@ -335,7 +356,8 @@ export function useBoard() {
   async function updateCustomType(key: string, label: string, hue: number) {
     registerCardType({ key, label, hue, blurb: "Custom", custom: true });
     setCustomTypes((p) => p.map((d) => (d.key === key ? { ...d, label, hue } : d)));
-    await supabase.from("card_types").update({ label, hue }).eq("key", key);
+    const { error } = await supabase.from("card_types").update({ label, hue }).eq("key", key);
+    if (error) reportError("update that type");
   }
 
   async function deleteCustomType(key: string) {
@@ -345,16 +367,22 @@ export function useBoard() {
     setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.filter((c) => !idSet.has(c.id)) })).filter((s) => s.cards.length > 0));
     unregisterCardType(key);
     setCustomTypes((p) => p.filter((d) => d.key !== key));
-    if (idSet.size) await supabase.from("cards").delete().in("id", Array.from(idSet));
+    let hadError = false;
+    if (idSet.size) {
+      const { error } = await supabase.from("cards").delete().in("id", Array.from(idSet));
+      if (error) hadError = true;
+    }
     if (emptiedSlotIds.length) await supabase.from("slots").delete().in("id", emptiedSlotIds);
-    await supabase.from("card_types").delete().eq("key", key);
+    const { error: typeErr } = await supabase.from("card_types").delete().eq("key", key);
+    if (hadError || typeErr) { reportError("fully delete that type"); reload(); }
   }
 
   async function updateCard(cardId: string, patch: Partial<Card>) {
     setBoard((b) =>
       b.map((s) => ({ ...s, cards: s.cards.map((c) => (c.id === cardId ? { ...c, ...patch } : c)) })),
     );
-    await supabase.from("cards").update(patch).eq("id", cardId);
+    const { error } = await supabase.from("cards").update(patch).eq("id", cardId);
+    if (error) { reportError("save your change"); reload(); }
   }
 
   // If any of the cards about to be deleted is the root of a recurring
@@ -364,10 +392,11 @@ export function useBoard() {
   // rest of the series pointing at a since-deleted id. Without this, the
   // FK's `on delete set null` silently ungroups every remaining occurrence
   // from the series (no crash, but "N copies / Remove all copies" breaks).
-  async function promoteRootsBeforeDelete(idsBeingDeleted: string[]) {
+  async function promoteRootsBeforeDelete(idsBeingDeleted: string[]): Promise<boolean> {
     const deleteSet = new Set(idsBeingDeleted);
     const allCards: Card[] = [];
     board.forEach((s) => s.cards.forEach((c) => allCards.push(c)));
+    let ok = true;
 
     for (const id of idsBeingDeleted) {
       const card = allCards.find((c) => c.id === id);
@@ -384,9 +413,16 @@ export function useBoard() {
       // generator (recurrence.ts) and Board's bill aggregation
       // (billBoardStack.ts) both key series membership off the root
       // actually having recur_freq set.
-      await supabase.from("cards").update({ origin: null, recur_freq: card.recur_freq, recur_until: card.recur_until }).eq("id", newRoot.id);
+      const { error: rootErr } = await supabase
+        .from("cards")
+        .update({ origin: null, recur_freq: card.recur_freq, recur_until: card.recur_until })
+        .eq("id", newRoot.id);
+      if (rootErr) ok = false;
       const otherIds = others.map((o) => o.id);
-      if (otherIds.length) await supabase.from("cards").update({ origin: newRoot.id }).in("id", otherIds);
+      if (otherIds.length) {
+        const { error: sibErr } = await supabase.from("cards").update({ origin: newRoot.id }).in("id", otherIds);
+        if (sibErr) ok = false;
+      }
 
       setBoard((b) => b.map((s) => ({
         ...s,
@@ -397,10 +433,12 @@ export function useBoard() {
         }),
       })));
     }
+    return ok;
   }
 
   async function deleteCard(cardId: string) {
-    await promoteRootsBeforeDelete([cardId]);
+    const promoted = await promoteRootsBeforeDelete([cardId]);
+    if (!promoted) { reportError("delete that card"); reload(); return; }
     let emptiedSlotId: string | null = null;
     setBoard((b) =>
       b
@@ -412,7 +450,8 @@ export function useBoard() {
         })
         .filter((s) => s.cards.length > 0),
     );
-    await supabase.from("cards").delete().eq("id", cardId);
+    const { error } = await supabase.from("cards").delete().eq("id", cardId);
+    if (error) { reportError("delete that card"); reload(); return; }
     if (emptiedSlotId) await supabase.from("slots").delete().eq("id", emptiedSlotId);
   }
 
@@ -433,23 +472,25 @@ export function useBoard() {
         .filter((s) => s.id !== sourceSlotId),
     );
 
-    await Promise.all(
+    const results = await Promise.all(
       source.cards.map((c, i) =>
         supabase.from("cards").update({ slot_id: targetSlotId, position_in_slot: startPos + i }).eq("id", c.id),
       ),
     );
-    await supabase.from("slots").delete().eq("id", sourceSlotId);
+    if (results.some((r) => r.error)) { reportError("merge those cards"); reload(); return; }
+    const { error } = await supabase.from("slots").delete().eq("id", sourceSlotId);
+    if (error) reportError("clean up that stack");
   }
 
   // Pop one card out of a stack into its own new slot.
   async function unstack(slotId: string, cardId: string) {
     if (!userId) return;
-    const { data: newSlot } = await supabase
+    const { data: newSlot, error: slotErr } = await supabase
       .from("slots")
       .insert({ user_id: userId, name: "" })
       .select()
       .single();
-    if (!newSlot) return;
+    if (slotErr || !newSlot) { reportError("remove that card from the stack"); return; }
 
     setBoard((b) => {
       const out: BoardSlot[] = [];
@@ -465,7 +506,8 @@ export function useBoard() {
       return out;
     });
 
-    await supabase.from("cards").update({ slot_id: newSlot.id, position_in_slot: 0 }).eq("id", cardId);
+    const { error } = await supabase.from("cards").update({ slot_id: newSlot.id, position_in_slot: 0 }).eq("id", cardId);
+    if (error) { reportError("remove that card from the stack"); reload(); }
   }
 
   // Split every card in a stack out into its own slot.
@@ -477,6 +519,7 @@ export function useBoard() {
     const newSlots = await Promise.all(
       slot.cards.map(() => supabase.from("slots").insert({ user_id: userId, name: "" }).select().single()),
     );
+    if (newSlots.some((r) => r.error || !r.data)) { reportError("ungroup that stack"); return; }
 
     setBoard((b) => {
       const out: BoardSlot[] = [];
@@ -491,18 +534,20 @@ export function useBoard() {
       return out;
     });
 
-    await Promise.all(
+    const results = await Promise.all(
       slot.cards.map((c, i) => {
         const ns = newSlots[i].data;
         return ns ? supabase.from("cards").update({ slot_id: ns.id, position_in_slot: 0 }).eq("id", c.id) : null;
       }),
     );
+    if (results.some((r) => r?.error)) { reportError("ungroup that stack"); reload(); return; }
     await supabase.from("slots").delete().eq("id", slotId);
   }
 
   async function renameSlot(slotId: string, name: string) {
     setBoard((b) => b.map((s) => (s.id === slotId ? { ...s, name } : s)));
-    await supabase.from("slots").update({ name }).eq("id", slotId);
+    const { error } = await supabase.from("slots").update({ name }).eq("id", slotId);
+    if (error) { reportError("rename that stack"); reload(); }
   }
 
   // Assign an explicit display order (0..n) to the given cards, by id
@@ -512,7 +557,8 @@ export function useBoard() {
     const rank: Record<string, number> = {};
     orderedIds.forEach((id, i) => { rank[id] = i; });
     setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (c.id in rank ? { ...c, card_order: rank[c.id] } : c)) })));
-    await Promise.all(orderedIds.map((id, i) => supabase.from("cards").update({ card_order: i }).eq("id", id)));
+    const results = await Promise.all(orderedIds.map((id, i) => supabase.from("cards").update({ card_order: i }).eq("id", id)));
+    if (results.some((r) => r.error)) { reportError("save that order"); reload(); }
   }
 
   // Stamp a dated COPY of a reusable (undated) card onto a calendar day —
@@ -525,8 +571,8 @@ export function useBoard() {
     if (!master) return;
     const m = master as Card;
 
-    const { data: slot } = await supabase.from("slots").insert({ user_id: userId, name: "" }).select().single();
-    if (!slot) return;
+    const { data: slot, error: slotErr } = await supabase.from("slots").insert({ user_id: userId, name: "" }).select().single();
+    if (slotErr || !slot) { reportError("add that to the calendar"); return; }
 
     const copyFields = { ...m } as Partial<Card>;
     delete copyFields.id;
@@ -534,23 +580,25 @@ export function useBoard() {
     delete copyFields.updated_at;
     delete copyFields.slot_id;
 
-    const { data: copy } = await supabase
+    const { data: copy, error: copyErr } = await supabase
       .from("cards")
       .insert({ ...copyFields, user_id: userId, slot_id: slot.id, date, origin: m.origin || m.id, position_in_slot: 0 })
       .select()
       .single();
-    if (!copy) return;
+    if (copyErr || !copy) { reportError("add that to the calendar"); return; }
 
     setBoard((b) => [{ ...slot, cards: [copy as Card] }, ...b]);
   }
 
   async function bulkDeleteBills(ids: string[]) {
     if (!ids.length) return;
-    await promoteRootsBeforeDelete(ids);
+    const promoted = await promoteRootsBeforeDelete(ids);
+    if (!promoted) { reportError("delete those bills"); reload(); return; }
     const idSet = new Set(ids);
     const emptiedSlotIds = board.filter((s) => s.cards.every((c) => idSet.has(c.id))).map((s) => s.id);
     setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.filter((c) => !idSet.has(c.id)) })).filter((s) => s.cards.length > 0));
-    await supabase.from("cards").delete().in("id", ids);
+    const { error } = await supabase.from("cards").delete().in("id", ids);
+    if (error) { reportError("delete those bills"); reload(); return; }
     if (emptiedSlotIds.length) await supabase.from("slots").delete().in("id", emptiedSlotIds);
   }
 
@@ -558,7 +606,8 @@ export function useBoard() {
     if (!ids.length) return;
     const idSet = new Set(ids);
     setBoard((b) => b.map((s) => ({ ...s, cards: s.cards.map((c) => (idSet.has(c.id) ? { ...c, paid } : c)) })));
-    await supabase.from("cards").update({ paid }).in("id", ids);
+    const { error } = await supabase.from("cards").update({ paid }).in("id", ids);
+    if (error) { reportError("update those bills"); reload(); }
   }
 
   return {
@@ -566,5 +615,6 @@ export function useBoard() {
     stampCard, bulkDeleteBills, bulkMarkBills, applyCardOrder, restoreCards, materializeOccurrence,
     skipOccurrence, unskipOccurrence, stopRecurrence, splitSeriesFrom,
     createCustomType, updateCustomType, deleteCustomType,
+    errorMsg, clearError: () => setErrorMsg(null),
   };
 }

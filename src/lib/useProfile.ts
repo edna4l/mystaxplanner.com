@@ -22,6 +22,7 @@ export function useProfile() {
   const supabase = createClient();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     const {
@@ -40,15 +41,17 @@ export function useProfile() {
     const next = { ...profile, ...patch };
     setProfile(next);
     const dbPatch: Record<string, unknown> = { ...patch };
-    await supabase.from("profiles").update(dbPatch).eq("id", profile.id);
+    const { error } = await supabase.from("profiles").update(dbPatch).eq("id", profile.id);
+    if (error) { setErrorMsg("Couldn't save that change. Check your connection and try again."); reload(); }
   }
 
   async function updateTweaks(patch: Partial<Tweaks>) {
     if (!profile) return;
     const tweaks = { ...profile.tweaks, ...patch };
     setProfile({ ...profile, tweaks });
-    await supabase.from("profiles").update({ tweaks }).eq("id", profile.id);
+    const { error } = await supabase.from("profiles").update({ tweaks }).eq("id", profile.id);
+    if (error) { setErrorMsg("Couldn't save that change. Check your connection and try again."); reload(); }
   }
 
-  return { profile, loading, reload, updateProfile, updateTweaks };
+  return { profile, loading, reload, updateProfile, updateTweaks, errorMsg, clearError: () => setErrorMsg(null) };
 }

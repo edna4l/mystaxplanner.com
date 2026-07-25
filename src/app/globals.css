@@ -1284,6 +1284,8 @@ input, textarea { font-family: inherit; }
 .toast-action { border: 1px solid color-mix(in oklab, var(--bg) 40%, transparent); background: transparent; color: var(--bg); font-weight: 700; font-size: 13px; padding: 6px 14px; border-radius: 999px; cursor: pointer; }
 .toast-action:hover { background: color-mix(in oklab, var(--bg) 15%, transparent); }
 .toast-x { border: none; background: transparent; color: color-mix(in oklab, var(--bg) 60%, transparent); cursor: pointer; font-size: 12px; padding: 4px; }
+.toast-error { background: oklch(0.42 0.16 25); }
+.toast-error .toast-x { color: color-mix(in oklab, var(--bg) 75%, transparent); }
 
 /* ---------- auth pages (new — not in the original prototype) ---------- */
 .auth-overlay { position: fixed; }
