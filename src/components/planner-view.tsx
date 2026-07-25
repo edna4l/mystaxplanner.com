@@ -3,9 +3,7 @@
 // The Planner's own "digital binder" shell — a colored side-tab rail
 // (collapsing to a horizontal scroll row on mobile) that switches
 // between lenses over the exact same board data every other view
-// reads, never a second store of information. Only Index and Plan are
-// built so far; the rest render a lightweight placeholder rather than
-// a dead link, since this is being built in phases.
+// reads, never a second store of information. All 8 tabs are built.
 import { useState } from "react";
 import type { BoardSlot, Card } from "@/lib/types";
 import { PlannerIndex } from "@/components/planner-index";
@@ -15,6 +13,7 @@ import { PlannerWork } from "@/components/planner-work";
 import { PlannerFinance } from "@/components/planner-finance";
 import { PlannerWellness } from "@/components/planner-wellness";
 import { PlannerHome } from "@/components/planner-home";
+import { PlannerNotes } from "@/components/planner-notes";
 
 export type PlannerTab = "index" | "focus" | "plan" | "work" | "finance" | "wellness" | "home" | "notes";
 
@@ -28,15 +27,6 @@ const TABS: { key: PlannerTab; label: string; hue: number }[] = [
   { key: "home", label: "Home", hue: 70 },
   { key: "notes", label: "Notes", hue: 20 },
 ];
-
-function ComingSoon({ label, hue }: { label: string; hue: number }) {
-  return (
-    <div className="planner-soon" style={{ "--hue": hue } as React.CSSProperties}>
-      <h3 className="planner-soon-title">{label}</h3>
-      <p className="planner-soon-sub">This lens isn&rsquo;t built yet — Index and Plan are live for now, the rest are coming in order.</p>
-    </div>
-  );
-}
 
 export function PlannerView({
   board,
@@ -56,7 +46,6 @@ export function PlannerView({
   onStampCard: (cardId: string, date: string) => void;
 }) {
   const [tab, setTab] = useState<PlannerTab>("plan");
-  const active = TABS.find((t) => t.key === tab) ?? TABS[2];
 
   return (
     <div className="planner">
@@ -88,7 +77,7 @@ export function PlannerView({
         ) : tab === "home" ? (
           <PlannerHome board={board} onOpenCard={onOpenCard} onStampCard={onStampCard} />
         ) : (
-          <ComingSoon label={active.label} hue={active.hue} />
+          <PlannerNotes board={board} onOpenCard={onOpenCard} onUpdateCard={onUpdateCard} />
         )}
       </div>
     </div>
