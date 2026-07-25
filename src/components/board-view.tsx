@@ -327,28 +327,30 @@ export function BoardView({
 
   return (
     <>
-      <TodayGlance summary={todaySummary} onOpenCard={onOpenCard} />
+      <div className="board-header">
+        <TodayGlance summary={todaySummary} onOpenCard={onOpenCard} />
+        <div className="board-sort-row">
+          <div className="view-switch">
+            {BOARD_MODES.map((m) => (
+              <button key={m} className={"view-switch-b" + (boardView === m ? " on" : "")} onClick={() => onChangeBoardView(m)}>
+                {m}
+              </button>
+            ))}
+          </div>
+          {hasAnyTiles && boardView !== "Timeline" && boardView !== "Now/Next/Later" ? (
+            <select className="bsort" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} title="Sort board">
+              <option value="date">Sort: Date</option>
+              <option value="amount">Sort: Amount (high→low)</option>
+              <option value="amount-asc">Sort: Amount (low→high)</option>
+              <option value="name">Sort: A→Z</option>
+              <option value="name-desc">Sort: Z→A</option>
+              <option value="category">Sort: Category</option>
+            </select>
+          ) : null}
+        </div>
+      </div>
       <NeedsAttention summary={todaySummary} onOpenCard={onOpenCard} onOpenCategory={onOpenCardGroup} />
       <SmartSuggestionBanner suggestions={suggestions} onReview={onOpenCardGroup} onDismiss={onDismissSuggestion} />
-      <div className="board-sort-row">
-        <div className="view-switch">
-          {BOARD_MODES.map((m) => (
-            <button key={m} className={"view-switch-b" + (boardView === m ? " on" : "")} onClick={() => onChangeBoardView(m)}>
-              {m}
-            </button>
-          ))}
-        </div>
-        {hasAnyTiles && boardView !== "Timeline" && boardView !== "Now/Next/Later" ? (
-          <select className="bsort" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} title="Sort board">
-            <option value="date">Sort: Date</option>
-            <option value="amount">Sort: Amount (high→low)</option>
-            <option value="amount-asc">Sort: Amount (low→high)</option>
-            <option value="name">Sort: A→Z</option>
-            <option value="name-desc">Sort: Z→A</option>
-            <option value="category">Sort: Category</option>
-          </select>
-        ) : null}
-      </div>
 
       {boardView === "Cards" ? (
         sortedFlat.length ? (
