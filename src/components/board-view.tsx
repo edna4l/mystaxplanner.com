@@ -9,7 +9,7 @@
 // card with no grouping at all; "Timeline" is the same grouped tiles as
 // Stacks, laid out chronologically by month instead of by category.
 // Same sort options as the Bills page (bills-view.tsx).
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { BoardSlot, Card } from "@/lib/types";
 import type { Tweaks } from "@/lib/theme";
 import { SquareCard, StackTile } from "@/components/square-card";
@@ -103,6 +103,82 @@ export function BoardView({
   const [laneOverKey, setLaneOverKey] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>("date");
 
+  // Touch equivalent of the mouse drag below — no iOS/Android browser
+  // fires native HTML5 drag events from a touchscreen at all, so without
+  // this, dragging is entirely a desktop-only feature. A long-press
+  // (normal taps/scrolls must keep working untouched) starts a drag;
+  // while held, elementFromPoint finds whatever's under the finger,
+  // since touch has no per-element dragover/dragleave the way mouse
+  // drag does. Feeds the exact same dragId/overId/laneOverKey state the
+  // mouse path uses, so both inputs share one set of drop handlers.
+  const touchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchDragging = useRef(false);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+
+  function resolveDropId(x: number, y: number): string | null {
+    const el = document.elementFromPoint(x, y);
+    const dropEl = el?.closest("[data-drop-id]");
+    return dropEl ? dropEl.getAttribute("data-drop-id") : null;
+  }
+
+  function hoverDrop(dropId: string | null) {
+    if (dropId && dropId.startsWith("lane:")) { setLaneOverKey(dropId.slice(5)); setOverId(null); }
+    else { setOverId(dropId); setLaneOverKey(null); }
+  }
+
+  function finishTouchDrop(sourceId: string, dropId: string | null) {
+    if (dropId && dropId.startsWith("lane:")) {
+      const key = dropId.slice(5);
+      const slot = board.find((s) => s.id === sourceId);
+      if (slot && slot.cards.length === 1 && slot.cards[0].type !== "habit") {
+        onUpdateCard(slot.cards[0].id, { date: laneTargetDate(key) });
+      }
+    } else if (dropId && dropId !== sourceId) {
+      onMerge(sourceId, dropId);
+    }
+    setDragId(null); setOverId(null); setLaneOverKey(null);
+  }
+
+  function touchPropsFor(dropSelfId: string): React.HTMLAttributes<HTMLDivElement> {
+    return {
+      onTouchStart: (e) => {
+        const t = e.touches[0];
+        touchStart.current = { x: t.clientX, y: t.clientY };
+        if (touchTimer.current) clearTimeout(touchTimer.current);
+        touchTimer.current = setTimeout(() => {
+          touchDragging.current = true;
+          setDragId(dropSelfId);
+          if (navigator.vibrate) navigator.vibrate(12);
+        }, 320);
+      },
+      onTouchMove: (e) => {
+        const t = e.touches[0];
+        if (!touchDragging.current) {
+          if (touchStart.current && touchTimer.current) {
+            const dx = Math.abs(t.clientX - touchStart.current.x);
+            const dy = Math.abs(t.clientY - touchStart.current.y);
+            if (dx > 10 || dy > 10) { clearTimeout(touchTimer.current); touchTimer.current = null; }
+          }
+          return;
+        }
+        e.preventDefault();
+        hoverDrop(resolveDropId(t.clientX, t.clientY));
+      },
+      onTouchEnd: (e) => {
+        if (touchTimer.current) { clearTimeout(touchTimer.current); touchTimer.current = null; }
+        if (!touchDragging.current) return;
+        touchDragging.current = false;
+        const t = e.changedTouches[0];
+        finishTouchDrop(dropSelfId, resolveDropId(t.clientX, t.clientY));
+      },
+      onTouchCancel: () => {
+        if (touchTimer.current) { clearTimeout(touchTimer.current); touchTimer.current = null; }
+        touchDragging.current = false;
+        setDragId(null); setOverId(null); setLaneOverKey(null);
+      },
+    };
+  }
+
   // Standalone bills (single-card slots) are pulled out of the grid and
   // summarized into one aggregate tile — manually-stacked slots are left
   // untouched. See src/lib/billBoardStack.ts.
@@ -170,16 +246,17 @@ export function BoardView({
   function slotTile(s: BoardSlot, wide?: boolean) {
     const over = overId === s.id;
     const dp = dragPropsFor(s.id);
+    const tp = touchPropsFor(s.id);
     const cls = "slot" + (over ? " over" : "") + (dragId === s.id ? " dragging" : "") + (wide ? " wide" : "");
     if (s.cards.length === 1) {
       return (
-        <div key={s.id} className={cls} {...dp}>
+        <div key={s.id} className={cls} data-drop-id={s.id} {...dp} {...tp}>
           <SquareCard card={s.cards[0]} onOpen={(e) => onOpenCard(s.cards[0], e.currentTarget.getBoundingClientRect())} />
         </div>
       );
     }
     return (
-      <div key={s.id} className={cls} {...dp}>
+      <div key={s.id} className={cls} data-drop-id={s.id} {...dp} {...tp}>
         <StackTile cards={s.cards} slotName={s.name} onOpen={() => onOpenStack(s)} />
       </div>
     );
@@ -385,6 +462,7 @@ export function BoardView({
               <div
                 className={"nnl-lane nnl-lane-" + g.key + (laneOverKey === g.key ? " over" : "")}
                 key={g.key}
+                data-drop-id={"lane:" + g.key}
                 {...laneDropProps(g.key)}
               >
                 <div className="nnl-lane-head">

@@ -768,7 +768,13 @@ input, textarea { font-family: inherit; }
      width-constrained by their own .timeline/.nnl-lanes ancestor. */
   max-width: 1600px; margin: 0 auto;
 }
-.slot { width: var(--card-size); height: var(--card-size); position: relative; }
+.slot {
+  width: var(--card-size); height: var(--card-size); position: relative;
+  /* Long-press starts a touch-drag (see board-view.tsx) — without these,
+     iOS/Android's own long-press context menu / text-selection UI fights
+     with the gesture instead of it starting a drag. */
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+}
 .slot.wide { grid-column: span 2; width: auto; }
 .slot.dragging { opacity: 0.35; }
 .slot.over::after {
