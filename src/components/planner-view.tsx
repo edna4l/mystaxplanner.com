@@ -10,6 +10,7 @@ import { useState } from "react";
 import type { BoardSlot, Card } from "@/lib/types";
 import { PlannerIndex } from "@/components/planner-index";
 import { PlannerPlan } from "@/components/planner-plan";
+import { PlannerFocus } from "@/components/planner-focus";
 
 export type PlannerTab = "index" | "focus" | "plan" | "work" | "finance" | "wellness" | "home" | "notes";
 
@@ -39,12 +40,14 @@ export function PlannerView({
   onUpdateCard,
   onGo,
   onStartFocusDeck,
+  onOpenDailyReset,
 }: {
   board: BoardSlot[];
   onOpenCard: (card: Card, rect: DOMRect | null) => void;
   onUpdateCard: (id: string, patch: Partial<Card>) => void;
   onGo: (dest: "bills" | "board" | "calendar") => void;
   onStartFocusDeck: () => void;
+  onOpenDailyReset: () => void;
 }) {
   const [tab, setTab] = useState<PlannerTab>("plan");
   const active = TABS.find((t) => t.key === tab) ?? TABS[2];
@@ -68,6 +71,8 @@ export function PlannerView({
           <PlannerIndex board={board} onOpenCard={onOpenCard} onGo={onGo} onOpenTab={setTab} onStartFocusDeck={onStartFocusDeck} />
         ) : tab === "plan" ? (
           <PlannerPlan board={board} onOpenCard={onOpenCard} onUpdateCard={onUpdateCard} />
+        ) : tab === "focus" ? (
+          <PlannerFocus board={board} onOpenCard={onOpenCard} onStartFocusDeck={onStartFocusDeck} onOpenDailyReset={onOpenDailyReset} />
         ) : (
           <ComingSoon label={active.label} hue={active.hue} />
         )}

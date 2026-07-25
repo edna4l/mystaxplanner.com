@@ -1362,6 +1362,24 @@ input, textarea { font-family: inherit; }
 }
 .planner-shortcut:hover { transform: translateY(-1px); }
 
+/* Focus */
+.planner-focus { display: flex; flex-direction: column; gap: 20px; max-width: 700px; }
+.focus-launch { display: flex; gap: 12px; flex-wrap: wrap; }
+.planner-next-block {
+  display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 16px;
+  background: oklch(var(--tint-L) calc(var(--chroma) * 0.7) var(--hue)); border: 1px solid oklch(calc(var(--tint-L) - 0.08) calc(var(--chroma) * 0.8) var(--hue));
+}
+.planner-next-block-title { border: none; background: transparent; padding: 0; text-align: left; font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--ink); cursor: pointer; }
+.planner-pomodoro-wrap { display: flex; flex-direction: column; gap: 10px; }
+.pomodoro {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 28px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 20px;
+}
+.pomodoro.break { background: oklch(0.94 0.05 150); border-color: oklch(0.75 0.08 150); }
+.pomodoro-mode { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.pomodoro-clock { font-size: 44px; font-weight: 700; letter-spacing: -0.02em; }
+.pomodoro-actions { display: flex; align-items: center; gap: 14px; }
+
 /* Plan */
 .pl-plan { display: flex; flex-direction: column; gap: 16px; }
 .pl-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

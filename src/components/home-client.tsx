@@ -451,6 +451,7 @@ export default function HomeClient() {
           onUpdateCard={handleUpdateCard}
           onGo={(dest) => setView(dest)}
           onStartFocusDeck={startFocusDeck}
+          onOpenDailyReset={() => setDailyResetOpen(true)}
         />
       ) : sectionType ? (
         <SectionView
