@@ -1008,9 +1008,26 @@ input, textarea { font-family: inherit; }
   .head-right > .icon-toggle,
   .head-right > .avatar,
   .head-right > .quick-add-btn,
-  .head-right > .add-btn { display: none; }
+  .head-right > .add-btn,
+  .head-right > form { display: none; }
   .hamburger { display: flex; }
 }
+
+/* mobile menu (opened by .hamburger — see topbar.tsx) */
+.mobile-menu-backdrop { position: fixed; inset: 0; z-index: 90; background: transparent; }
+.mobile-menu {
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 91; width: 220px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 8px;
+  box-shadow: 0 20px 50px -16px rgba(0,0,0,.4); animation: fanIn .16s ease;
+}
+.mobile-menu-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; border: none; background: transparent;
+  padding: 10px 12px; border-radius: 10px; text-align: left; font-size: 14px; font-weight: 600;
+  color: var(--ink); cursor: pointer; transition: background .12s ease; font-family: inherit;
+}
+.mobile-menu-row:hover { background: var(--bg); }
+.mobile-menu-icon { width: 20px; flex: none; text-align: center; font-size: 15px; color: var(--muted); }
+.mobile-menu-row-form { display: block; }
 
 @media (max-width: 640px) {
   .topbar { grid-template-columns: 1fr auto; row-gap: 6px; padding: 16px 18px 10px; position: relative; }

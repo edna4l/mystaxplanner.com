@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { BUILTIN_CARD_TYPES } from "@/lib/cardTypes";
 import type { CardTypeDef, Profile } from "@/lib/types";
 import { Avatar } from "@/components/avatar";
@@ -40,6 +41,7 @@ export function Topbar({
   // Types with their own dedicated tab (Bills) are excluded from the
   // section-chip row — clicking them would just duplicate the Bills tab.
   const sectionTypes = [...Object.values(BUILTIN_CARD_TYPES).filter((t) => t.key !== "bill"), ...customTypes];
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
     <>
       <header className="topbar">
@@ -64,6 +66,36 @@ export function Topbar({
           <form action="/auth/signout" method="post">
             <button className="icon-toggle" type="submit" title="Sign out">⏻</button>
           </form>
+          <button className="hamburger" onClick={() => setMenuOpen((v) => !v)} aria-label="Menu">
+            <span /><span /><span />
+          </button>
+          {menuOpen ? (
+            <>
+              <div className="mobile-menu-backdrop" onClick={() => setMenuOpen(false)} />
+              <div className="mobile-menu">
+                <button className="mobile-menu-row" onClick={() => { setMenuOpen(false); onSearch(); }}>
+                  <span className="mobile-menu-icon">⌕</span>Search
+                </button>
+                <button className="mobile-menu-row" onClick={() => { setMenuOpen(false); onQuickAdd(); }}>
+                  <span className="mobile-menu-icon">+</span>Quick add
+                </button>
+                <button className="mobile-menu-row" onClick={() => { setMenuOpen(false); onAdd(); }}>
+                  <span className="mobile-menu-icon">+</span>New card
+                </button>
+                <button className="mobile-menu-row" onClick={() => { setMenuOpen(false); onToggleDark(); }}>
+                  <span className="mobile-menu-icon">{dark ? "☀" : "☾"}</span>{dark ? "Light mode" : "Dark mode"}
+                </button>
+                <button className="mobile-menu-row" onClick={() => { setMenuOpen(false); onOpenSettings(); }}>
+                  <span className="mobile-menu-icon">⚙</span>Settings
+                </button>
+                <form action="/auth/signout" method="post" className="mobile-menu-row-form">
+                  <button className="mobile-menu-row" type="submit">
+                    <span className="mobile-menu-icon">⏻</span>Sign out
+                  </button>
+                </form>
+              </div>
+            </>
+          ) : null}
         </div>
       </header>
       <div className="filters">
