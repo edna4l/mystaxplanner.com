@@ -16,37 +16,34 @@ const MON = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+// Shows up to 2 compact single-line entries per day, with a "+N more"
+// indicator for the rest — full details are one click away (opens the
+// single card, or a DayFan for multiple). Dragging is only enabled when
+// the cell holds exactly one card, since a multi-card cell's entries
+// aren't individually draggable targets yet.
 function DayCluster({ cards, onClick, onDragCard }: { cards: Card[]; onClick: () => void; onDragCard: (e: React.DragEvent, id: string) => void }) {
-  const layers = Math.min(cards.length, 3);
-  const top = cards[0];
-  const T = typeMeta(top.type);
+  const visible = cards.slice(0, 2);
+  const overflow = cards.length - visible.length;
   const single = cards.length === 1;
   return (
     <div className="cal-cluster" onClick={onClick}>
-      {Array.from({ length: layers - 1 }).map((_, i) => (
-        <div key={i} className="cal-layer" style={{ "--hue": typeMeta(cards[i + 1].type).hue, "--i": layers - 1 - i } as React.CSSProperties} />
-      ))}
-      <div
-        className={"cal-card" + (single ? " cal-drag" : "")}
-        style={{ "--hue": T.hue, fontSize: "13px" } as React.CSSProperties}
-        draggable={single}
-        onDragStart={single ? (e) => { e.stopPropagation(); onDragCard(e, top.id); } : undefined}
-      >
-        <div className="cal-card-top">
-          <span className="swatch" />
-          {top.cover?.kind === "emoji" ? <span className="cal-emoji">{top.cover.val}</span> : null}
-          {cards.length > 1 ? <span className="cal-badge mono">{cards.length}</span> : null}
-        </div>
-        <span className="cal-card-title">{top.title}</span>
-      </div>
-      <div className="cal-bars" aria-hidden="true">
-        {cards.slice(0, 4).map((c, i) => (
-          <span key={i} className="cal-bar" style={{ "--hue": typeMeta(c.type).hue } as React.CSSProperties}>
-            {c.cover?.kind === "emoji" ? <span className="cal-bar-emoji">{c.cover.val}</span> : null}
-          </span>
-        ))}
-        {cards.length > 4 ? <span className="cal-bar-more mono">+{cards.length - 4}</span> : null}
-      </div>
+      {visible.map((c) => {
+        const T = typeMeta(c.type);
+        return (
+          <div
+            key={c.id}
+            className={"cal-entry" + (single ? " cal-drag" : "")}
+            style={{ "--hue": T.hue } as React.CSSProperties}
+            draggable={single}
+            onDragStart={single ? (e) => { e.stopPropagation(); onDragCard(e, c.id); } : undefined}
+          >
+            <span className="swatch" />
+            {c.cover?.kind === "emoji" ? <span className="cal-emoji">{c.cover.val}</span> : null}
+            <span className="cal-entry-title">{c.title}</span>
+          </div>
+        );
+      })}
+      {overflow > 0 ? <span className="cal-more mono">+{overflow} more</span> : null}
     </div>
   );
 }

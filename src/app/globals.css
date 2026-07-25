@@ -19,7 +19,7 @@
   --faint: color-mix(in oklab, var(--ink) 14%, var(--bg));
 }
 .card, .stack-front, .panel, .add-row, .fan-item .card, .filter-chip, .na-item,
-.brow, .trow, .trisk, .cal-card, .search-row, .daily-reset-row, .focus-card {
+.brow, .trow, .trisk, .cal-entry, .search-row, .daily-reset-row, .focus-card {
   --tint: oklch(var(--tint-L) calc(var(--chroma) * 0.6) var(--hue));
   --accent: oklch(var(--accent-L) var(--chroma) var(--hue));
   --accent-ink: oklch(var(--accent-ink-L, 0.43) calc(var(--chroma) * 0.95) var(--hue));
@@ -345,21 +345,15 @@ input, textarea { font-family: inherit; }
 .cal-add:hover { background: var(--ink); color: var(--bg); }
 .cal-drag { cursor: grab; }
 .cal-drag:active { cursor: grabbing; }
-.cal-cluster { margin-top: 6px; position: relative; cursor: pointer; flex: 1; min-height: 56px; }
-.cal-layer { position: absolute; left: 0; right: 0; top: 0; height: 56px; border-radius: 10px;
-  background: oklch(var(--tint-L) calc(var(--chroma) * 0.6) var(--hue));
-  border: 1px solid oklch(calc(var(--tint-L) - 0.09) calc(var(--chroma) * 0.7) var(--hue));
-  transform: translate(calc(var(--i) * 4px), calc(var(--i) * 4px)); z-index: 0; }
-.cal-card { position: relative; z-index: 2; height: 56px; border-radius: 10px; padding: 7px 8px;
-  background: var(--tint);
-  border: 1px solid var(--tint-line);
-  display: flex; flex-direction: column; gap: 4px; transition: transform .14s ease; }
-.cal-cluster:hover .cal-card { transform: translateY(-2px); }
-.cal-bars { display: none; }
-.cal-card-top { display: flex; align-items: center; justify-content: space-between; }
-.cal-card-top .swatch { background: oklch(var(--accent-L) var(--chroma) var(--hue)); }
-.cal-badge { font-size: 10px; font-weight: 700; color: var(--bg); background: oklch(var(--accent-L) var(--chroma) var(--hue)); border-radius: 6px; padding: 1px 6px; }
-.cal-card-title { font-family: var(--font-display); font-weight: 600; font-size: 12.5px; line-height: 1.15; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cal-cluster { margin-top: 6px; cursor: pointer; flex: 1; display: flex; flex-direction: column; gap: 3px; min-height: 20px; }
+.cal-entry {
+  display: flex; align-items: center; gap: 5px; min-width: 0; padding: 3px 6px; border-radius: 7px;
+  background: var(--tint); border: 1px solid var(--tint-line); transition: transform .14s ease;
+}
+.cal-entry .swatch { flex: none; width: 6px; height: 6px; border-radius: 50%; background: oklch(var(--accent-L) var(--chroma) var(--hue)); }
+.cal-entry:hover { transform: translateY(-1px); }
+.cal-entry-title { min-width: 0; font-family: var(--font-display); font-weight: 600; font-size: 11.5px; line-height: 1.2; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-more { font-size: 10.5px; font-weight: 700; color: var(--muted); padding: 0 6px; }
 .cal-unsched { margin-top: 22px; }
 .cal-unsched-top { display: flex; flex-direction: column; gap: 3px; }
 .cal-unsched-label { font-size: 13px; font-weight: 700; color: var(--ink); }
@@ -701,7 +695,7 @@ input, textarea { font-family: inherit; }
 [data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .brow,
 [data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .trow,
 [data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .trisk,
-[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .cal-card,
+[data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .cal-entry,
 [data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .search-row,
 [data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .daily-reset-row,
 [data-cardvariant="gradient"]:not([data-cardstyle="outline"]) .focus-card {
@@ -1087,14 +1081,9 @@ input, textarea { font-family: inherit; }
   .cal-date { font-size: 11px; }
   .cal-add { display: none; }
   .cal-cluster { gap: 2px; }
-  /* multiple cards -> flat horizontal bars stacked neatly */
-  .cal-cluster > .cal-card, .cal-cluster > .cal-layer { display: none; }
-  .cal-bars { display: flex; flex-direction: column; gap: 3px; }
-  .cal-bar { height: 16px; border-radius: 4px; display: flex; align-items: center; justify-content: center; padding: 0 3px; overflow: hidden;
-    background: oklch(var(--tint-L) calc(var(--chroma) * 0.6) var(--hue));
-    border: 1px solid oklch(calc(var(--tint-L) - 0.09) calc(var(--chroma) * 0.7) var(--hue)); }
-  .cal-bar-emoji { font-size: 11px; line-height: 1; }
-  .cal-bar-more { font-size: 9px; font-weight: 700; color: var(--muted); padding-left: 2px; }
+  .cal-entry { padding: 2px 4px; gap: 3px; border-radius: 5px; }
+  .cal-entry-title { font-size: 10px; }
+  .cal-more { font-size: 9px; padding: 0 4px; }
   .cal-emoji { display: none; }
   .cal-unsched { padding: 14px 14px 0; }
   .cal-unsched-row { gap: 6px; }
