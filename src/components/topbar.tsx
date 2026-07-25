@@ -5,7 +5,7 @@ import { BUILTIN_CARD_TYPES } from "@/lib/cardTypes";
 import type { CardTypeDef, Profile } from "@/lib/types";
 import { Avatar } from "@/components/avatar";
 
-export type AppView = "today" | "board" | "calendar" | "bills" | "section";
+export type AppView = "today" | "board" | "calendar" | "bills" | "planner" | "section";
 
 export function Topbar({
   greeting,
@@ -119,6 +119,7 @@ export function Topbar({
           <button className={"vt" + (view === "board" ? " on" : "")} onClick={() => onView("board")}>Board</button>
           <button className={"vt" + (view === "calendar" ? " on" : "")} onClick={() => onView("calendar")}>Calendar</button>
           <button className={"vt" + (view === "bills" ? " on" : "")} onClick={() => onView("bills")}>Bills</button>
+          <button className={"vt" + (view === "planner" ? " on" : "")} onClick={() => onView("planner")}>Planner</button>
         </div>
         <span className="vt-divider" />
         {sectionTypes.map((t) => (

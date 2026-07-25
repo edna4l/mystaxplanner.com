@@ -1316,3 +1316,117 @@ input, textarea { font-family: inherit; }
     font-size: 16px;
   }
 }
+
+/* ---------- Planner ---------- */
+.planner { display: flex; align-items: flex-start; gap: 0; flex: 1; min-height: 0; }
+.planner-rail {
+  display: flex; flex-direction: column; gap: 4px; flex: none; width: 148px;
+  padding: 18px 12px; position: sticky; top: 0;
+}
+.planner-rail-tab {
+  border: none; border-radius: 12px; padding: 11px 14px; text-align: left; font-weight: 700; font-size: 13.5px;
+  background: color-mix(in oklab, oklch(0.7 0.13 var(--hue)) 16%, var(--panel));
+  color: color-mix(in oklab, oklch(0.4 0.13 var(--hue)) 70%, var(--ink));
+  cursor: pointer; transition: all .14s ease; border-left: 3px solid transparent;
+}
+.planner-rail-tab:hover { transform: translateX(2px); }
+.planner-rail-tab.on {
+  background: oklch(0.62 0.14 var(--hue)); color: white; border-left-color: color-mix(in oklab, oklch(0.3 0.14 var(--hue)) 60%, black);
+}
+.planner-content { flex: 1; min-width: 0; padding: 18px clamp(16px, 3vw, 40px) 60px; }
+
+.planner-soon { text-align: center; padding: 80px 20px; color: var(--muted); }
+.planner-soon-title { font-family: var(--font-display); font-weight: 700; font-size: 20px; color: var(--ink); margin: 0 0 8px; }
+.planner-soon-sub { font-size: 13.5px; max-width: 40ch; margin: 0 auto; }
+
+/* Index */
+.planner-index { display: flex; flex-direction: column; gap: 20px; max-width: 900px; }
+.planner-index-date { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.planner-index-headline { font-family: var(--font-display); font-weight: 700; font-size: 26px; margin: 4px 0 0; }
+.planner-index-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.planner-index-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.planner-index-card-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.planner-index-card-num { font-family: var(--font-display); font-weight: 700; font-size: 19px; }
+.planner-index-card-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 6px; }
+.planner-index-start { display: flex; }
+.planner-index-shortcuts { display: flex; flex-direction: column; gap: 10px; }
+.planner-index-shortcut-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.planner-shortcut {
+  border: none; border-radius: 999px; padding: 8px 16px; font-weight: 700; font-size: 12.5px; cursor: pointer;
+  background: color-mix(in oklab, oklch(0.7 0.13 var(--hue)) 20%, var(--panel));
+  color: color-mix(in oklab, oklch(0.4 0.13 var(--hue)) 70%, var(--ink));
+  transition: transform .14s ease;
+}
+.planner-shortcut:hover { transform: translateY(-1px); }
+
+/* Plan */
+.pl-plan { display: flex; flex-direction: column; gap: 16px; }
+.pl-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pl-nav { display: flex; align-items: center; gap: 8px; }
+.pl-nav-label { font-weight: 700; font-size: 14px; min-width: 90px; text-align: center; }
+.pl-body { display: flex; align-items: flex-start; gap: 20px; }
+.pl-main { flex: 1; min-width: 0; }
+.pl-rail { flex: none; width: 300px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 14px; }
+.pl-rail .section-label { padding: 0 2px 10px; }
+
+.pl-week { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.pl-day {
+  border-radius: 16px; padding: 12px; min-height: 160px; display: flex; flex-direction: column; gap: 8px;
+  background: oklch(var(--tint-L) calc(var(--chroma) * 0.7) var(--hue)); border: 1px solid oklch(calc(var(--tint-L) - 0.08) calc(var(--chroma) * 0.8) var(--hue));
+}
+.pl-day.today { box-shadow: 0 0 0 2px var(--ink); }
+.pl-day-head { display: flex; align-items: baseline; justify-content: space-between; }
+.pl-day-wd { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: color-mix(in oklab, oklch(0.35 var(--chroma) var(--hue)) 75%, var(--ink)); }
+.pl-day-num { font-size: 15px; font-weight: 700; }
+.pl-day-cards { display: flex; flex-direction: column; gap: 6px; }
+.pl-day-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 6px 8px; cursor: pointer;
+}
+.pl-day-card-time { font-size: 10px; color: var(--muted); }
+.pl-day-card-title { font-size: 12px; font-weight: 600; color: var(--ink); }
+.pl-day-empty { font-size: 12px; color: color-mix(in oklab, oklch(0.4 var(--chroma) var(--hue)) 55%, var(--muted)); }
+
+.pl-day-focus { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 14px; }
+
+.pl-schedule { display: flex; flex-direction: column; }
+.pl-hour { display: flex; align-items: stretch; gap: 10px; min-height: 40px; border-top: 1px solid var(--faint); transition: background .12s ease; }
+.pl-hour:first-child { border-top: none; }
+.pl-hour.over { background: color-mix(in oklab, oklch(0.6 0.13 250) 12%, transparent); }
+.pl-hour-label { flex: none; width: 52px; font-size: 10.5px; color: var(--muted); padding-top: 8px; }
+.pl-hour-slot { flex: 1; padding: 4px 0; min-width: 0; }
+.pl-block {
+  width: 100%; text-align: left; border: none; border-radius: 9px; padding: 6px 10px; cursor: pointer;
+  background: oklch(var(--tint-L) calc(var(--chroma) * 0.7) var(--hue)); display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.pl-block-title { font-size: 12.5px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-block-meta { font-size: 11px; color: var(--muted); flex: none; }
+
+.pl-agenda { display: flex; flex-direction: column; gap: 18px; }
+.pl-agenda-day { display: flex; flex-direction: column; gap: 6px; }
+.pl-agenda-row { display: flex; align-items: center; gap: 10px; border: none; background: transparent; text-align: left; padding: 6px 2px; cursor: pointer; font-size: 13px; color: var(--ink); border-radius: 8px; }
+.pl-agenda-row:hover { background: color-mix(in oklab, var(--ink) 5%, transparent); }
+
+.pl-tray { background: var(--panel); border: 1px dashed var(--line); border-radius: 18px; padding: 14px; }
+.pl-tray-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.pl-tray-hint { font-size: 12px; color: var(--muted); }
+.pl-tray-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.pl-tray-card {
+  display: flex; align-items: center; gap: 6px; background: oklch(var(--tint-L) calc(var(--chroma) * 0.6) var(--hue));
+  border: 1px solid var(--tint-line); border-radius: 999px; padding: 7px 13px; cursor: grab; font-size: 12.5px; font-weight: 600; color: var(--ink);
+}
+.pl-tray-card:active { cursor: grabbing; }
+.pl-tray-card-title { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 1100px) {
+  .pl-body { flex-direction: column; }
+  .pl-rail { width: 100%; }
+}
+@media (max-width: 900px) {
+  .planner { flex-direction: column; }
+  .planner-rail { position: static; width: 100%; flex-direction: row; overflow-x: auto; padding: 12px; gap: 8px; }
+  .planner-rail-tab { flex: none; white-space: nowrap; }
+}

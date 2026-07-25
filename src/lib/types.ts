@@ -49,6 +49,10 @@ export interface Card {
   occurrence_date: string | null;
   skipped: boolean | null;
 
+  // "HH:MM" 24h, or null for "no specific time" — the Planner's hourly
+  // daily schedule reads/writes this; every other view ignores it.
+  scheduled_time: string | null;
+
   created_at: string;
   updated_at: string;
 }

@@ -14,6 +14,7 @@ import { BoardView } from "@/components/board-view";
 import { TodayView } from "@/components/today-view";
 import { CalendarView } from "@/components/calendar-view";
 import { BillsView } from "@/components/bills-view";
+import { PlannerView } from "@/components/planner-view";
 import { SectionView } from "@/components/section-view";
 import { AddMenu, EditTypeModal } from "@/components/add-menu";
 import { ExpandedCard } from "@/components/expanded-card";
@@ -442,6 +443,14 @@ export default function HomeClient() {
           onAddBill={() => handleAdd("bill")}
           onBulkDelete={handleBulkDeleteBills}
           onBulkMark={handleBulkMarkBills}
+        />
+      ) : view === "planner" ? (
+        <PlannerView
+          board={board}
+          onOpenCard={openCardHandler}
+          onUpdateCard={handleUpdateCard}
+          onGo={(dest) => setView(dest)}
+          onStartFocusDeck={startFocusDeck}
         />
       ) : sectionType ? (
         <SectionView
