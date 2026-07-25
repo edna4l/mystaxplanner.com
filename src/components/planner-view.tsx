@@ -14,6 +14,7 @@ import { PlannerFocus } from "@/components/planner-focus";
 import { PlannerWork } from "@/components/planner-work";
 import { PlannerFinance } from "@/components/planner-finance";
 import { PlannerWellness } from "@/components/planner-wellness";
+import { PlannerHome } from "@/components/planner-home";
 
 export type PlannerTab = "index" | "focus" | "plan" | "work" | "finance" | "wellness" | "home" | "notes";
 
@@ -44,6 +45,7 @@ export function PlannerView({
   onGo,
   onStartFocusDeck,
   onOpenDailyReset,
+  onStampCard,
 }: {
   board: BoardSlot[];
   onOpenCard: (card: Card, rect: DOMRect | null) => void;
@@ -51,6 +53,7 @@ export function PlannerView({
   onGo: (dest: "bills" | "board" | "calendar") => void;
   onStartFocusDeck: () => void;
   onOpenDailyReset: () => void;
+  onStampCard: (cardId: string, date: string) => void;
 }) {
   const [tab, setTab] = useState<PlannerTab>("plan");
   const active = TABS.find((t) => t.key === tab) ?? TABS[2];
@@ -82,6 +85,8 @@ export function PlannerView({
           <PlannerFinance board={board} onGo={() => onGo("bills")} />
         ) : tab === "wellness" ? (
           <PlannerWellness board={board} onOpenCard={onOpenCard} />
+        ) : tab === "home" ? (
+          <PlannerHome board={board} onOpenCard={onOpenCard} onStampCard={onStampCard} />
         ) : (
           <ComingSoon label={active.label} hue={active.hue} />
         )}

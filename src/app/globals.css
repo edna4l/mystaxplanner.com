@@ -1379,6 +1379,14 @@ input, textarea { font-family: inherit; }
 .wellness-habit-row .dot-on { background: oklch(var(--accent-L) var(--chroma) var(--hue)); }
 .wellness-habit-title { flex: 1; min-width: 0; border: none; background: transparent; text-align: left; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wellness-habit-streak { flex: none; width: 44px; text-align: right; font-size: 11px; color: var(--muted); }
+.planner-home { display: flex; flex-direction: column; gap: 24px; }
+.home-reusable { padding-right: 6px; }
+.home-reusable .pl-tray-card-title { cursor: pointer; }
+.home-reusable-add {
+  flex: none; width: 20px; height: 20px; border-radius: 50%; border: none; cursor: pointer;
+  background: oklch(var(--accent-L) var(--chroma) var(--hue)); color: white; font-size: 14px; line-height: 1; display: grid; place-items: center;
+}
+.home-reusable-add:hover { filter: brightness(1.1); }
 .focus-launch { display: flex; gap: 12px; flex-wrap: wrap; }
 .planner-next-block {
   display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 16px;
