@@ -480,7 +480,17 @@ export function BillsView({
           <span className="bbulk-count">{selected.size} selected</span>
           <button className="bbulk-btn" onClick={() => { onBulkMark(Array.from(selected), true); setSelected(new Set()); }}>Mark paid</button>
           <button className="bbulk-btn" onClick={() => { onBulkMark(Array.from(selected), false); setSelected(new Set()); }}>Mark unpaid</button>
-          <button className="bbulk-btn bbulk-danger" onClick={() => { onBulkDelete(Array.from(selected)); setSelected(new Set()); }}>Delete</button>
+          <button
+            className="bbulk-btn bbulk-danger"
+            onClick={() => {
+              const n = selected.size;
+              if (!window.confirm(`Delete ${n} bill${n === 1 ? "" : "s"}? You can undo this from the toast right after.`)) return;
+              onBulkDelete(Array.from(selected));
+              setSelected(new Set());
+            }}
+          >
+            Delete
+          </button>
           <button className="bbulk-clear" onClick={() => setSelected(new Set())}>Clear</button>
         </div>
       ) : null}

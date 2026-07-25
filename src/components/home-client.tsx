@@ -253,6 +253,7 @@ export default function HomeClient() {
 
   function handleStopRecurrence() {
     if (!openCard) return;
+    if (!window.confirm(`Stop "${openCard.title}" from repeating after this occurrence? No future occurrences will be generated.`)) return;
     stopRecurrence(openCard.id);
   }
 
@@ -285,10 +286,17 @@ export default function HomeClient() {
   // Same skip-vs-hard-delete routing bulk delete already uses (Bills
   // list, handleBulkDeleteBills below) — a recurring occurrence gets
   // skipped so the rule doesn't regenerate it; anything else is a real
-  // delete.
-  function handleDeleteOrSkipCard(card: Card) {
-    if (seriesRootOf(card.id)?.recur_freq) skipOccurrence(card.id);
-    else deleteCard(card.id);
+  // delete. Always leaves an undo toast — this is reachable from Daily
+  // Reset's "Dismiss for now," which previously hard-deleted a one-off
+  // card with no way to get it back.
+  async function handleDeleteOrSkipCard(card: Card) {
+    if (seriesRootOf(card.id)?.recur_freq) {
+      const result = await skipOccurrence(card.id);
+      setToast({ msg: `${card.title} dismissed`, cards: [], skips: result ? [result] : [] });
+      return;
+    }
+    deleteCard(card.id);
+    setToast({ msg: `${card.title} deleted`, cards: [card], skips: [] });
   }
 
   // A recurring occurrence (virtual, or a materialized child of a root
