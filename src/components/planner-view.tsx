@@ -13,6 +13,7 @@ import { PlannerPlan } from "@/components/planner-plan";
 import { PlannerFocus } from "@/components/planner-focus";
 import { PlannerWork } from "@/components/planner-work";
 import { PlannerFinance } from "@/components/planner-finance";
+import { PlannerWellness } from "@/components/planner-wellness";
 
 export type PlannerTab = "index" | "focus" | "plan" | "work" | "finance" | "wellness" | "home" | "notes";
 
@@ -79,6 +80,8 @@ export function PlannerView({
           <PlannerWork board={board} onOpenCard={onOpenCard} onUpdateCard={onUpdateCard} />
         ) : tab === "finance" ? (
           <PlannerFinance board={board} onGo={() => onGo("bills")} />
+        ) : tab === "wellness" ? (
+          <PlannerWellness board={board} onOpenCard={onOpenCard} />
         ) : (
           <ComingSoon label={active.label} hue={active.hue} />
         )}

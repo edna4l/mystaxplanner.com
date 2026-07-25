@@ -1369,6 +1369,16 @@ input, textarea { font-family: inherit; }
 .planner-work { display: flex; flex-direction: column; gap: 22px; }
 .planner-work-projects { display: flex; flex-direction: column; gap: 10px; }
 .planner-finance { display: flex; flex-direction: column; gap: 22px; max-width: 700px; }
+.planner-wellness { display: flex; flex-direction: column; gap: 24px; max-width: 700px; }
+.wellness-tracker { display: flex; flex-direction: column; gap: 10px; }
+.wellness-tracker-head { display: flex; align-items: center; justify-content: space-between; }
+.wellness-wd-row { display: flex; gap: 4px; padding-right: 44px; }
+.wellness-wd { width: 9px; text-align: center; font-size: 9px; font-weight: 700; color: var(--muted); }
+.wellness-habit-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--faint); }
+.wellness-habit-row:first-of-type { border-top: none; }
+.wellness-habit-row .dot-on { background: oklch(var(--accent-L) var(--chroma) var(--hue)); }
+.wellness-habit-title { flex: 1; min-width: 0; border: none; background: transparent; text-align: left; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wellness-habit-streak { flex: none; width: 44px; text-align: right; font-size: 11px; color: var(--muted); }
 .focus-launch { display: flex; gap: 12px; flex-wrap: wrap; }
 .planner-next-block {
   display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 16px;
