@@ -108,6 +108,20 @@ function ExpandedBody({ card, onUpdate }: { card: Card; onUpdate: (patch: Partia
         <button className={"big-btn" + (card.paid ? " big-btn-on" : "")} onClick={(e) => { if (!card.paid) fx.coin(e.currentTarget); onUpdate({ paid: !card.paid }); }}>
           {card.paid ? "Paid ✓" : "Mark as paid"}
         </button>
+        <label className="field">
+          <span className="field-label">Total balance (optional)</span>
+          <input
+            className="inp"
+            type="number"
+            step="0.01"
+            placeholder="Leave blank if the amount above is the full balance"
+            value={card.balance ?? ""}
+            onChange={(e) => onUpdate({ balance: e.target.value === "" ? null : parseFloat(e.target.value) || 0 })}
+          />
+          <span className="ob-hint">
+            For a card that carries more than you're paying this cycle — the amount above is what you're paying now, this is your full balance. Bills shows the full balance as due until you mark it paid, then shows what's left after this payment.
+          </span>
+        </label>
         <div className="two">
           <label className="field"><span className="field-label">Due</span>
             <input className="inp" value={card.due || ""} onChange={(e) => onUpdate({ due: e.target.value })} />
