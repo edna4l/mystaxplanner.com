@@ -7,7 +7,7 @@
 import { BUILTIN_CARD_TYPES, CARD_TYPES, registerCardType } from "@/lib/cardTypes";
 export interface Tweaks {
   appearance: "Light" | "Dark";
-  palette: "Soft" | "Default" | "Vivid" | "Mono";
+  palette: "Soft" | "Default" | "Vivid" | "Max" | "Mono";
   cardStyle: "Paper" | "Flat" | "Outline";
   // Applies throughout the app (Board, Today, Calendar, Bills, the card
   // editor, search, Focus Deck/Daily Reset) — a soft per-hue gradient +
@@ -73,6 +73,11 @@ const PALETTE = {
   Soft: { c: 0.05, tl: 0.945, al: 0.55 },
   Default: { c: 0.085, tl: 0.93, al: 0.56 },
   Vivid: { c: 0.135, tl: 0.91, al: 0.585 },
+  // For anyone who wants Stax to look like a stack of colorful paper,
+  // not just a hint of tint — noticeably more saturated tint AND a
+  // deeper tint-L than Vivid, so cards read as genuinely colorful at a
+  // glance instead of a pastel suggestion of color.
+  Max: { c: 0.185, tl: 0.87, al: 0.6 },
   Mono: { c: 0.012, tl: 0.95, al: 0.45 },
 };
 const BG = {

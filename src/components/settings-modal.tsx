@@ -139,6 +139,11 @@ export function SettingsModal({
 
         <SettingsSection title="Colors">
           <div className="ob-section">
+            <span className="ob-label">Color intensity</span>
+            <Seg value={t.palette} options={["Mono", "Soft", "Default", "Vivid", "Max"]} onChange={(v) => onSaveTweaks({ palette: v })} />
+            <span className="ob-hint">How saturated colors are everywhere in the app. Max is bold and colorful throughout — closer to a stack of colored paper than a hint of tint. Mono is nearly grayscale.</span>
+          </div>
+          <div className="ob-section">
             <span className="ob-label">Accent color</span>
             <AccentRow value={profile.accent} onPick={pickAccent} />
             <HueWheel value={profile.accent ?? 0} onChange={pickAccent} />
