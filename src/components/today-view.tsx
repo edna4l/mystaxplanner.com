@@ -7,7 +7,7 @@ import { useMemo } from "react";
 import type { BoardSlot, Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
 import { shortISO, money } from "@/lib/date";
-import { computeTodaySummary } from "@/lib/todaySummary";
+import { computeTodaySummary, summaryHeadline } from "@/lib/todaySummary";
 import { markHabitDoneToday } from "@/lib/habits";
 import * as fx from "@/lib/fx";
 
@@ -65,8 +65,7 @@ export function TodayView({
     onUpdate(card.id, { days, streak });
   }
 
-  const nDue = dueToday.length + overdue.length;
-  const headline = nDue === 0 ? "You're all caught up." : nDue + (nDue === 1 ? " thing needs you today." : " things need you today.");
+  const headline = summaryHeadline(dueToday, overdue);
   const dateLine = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 
   return (

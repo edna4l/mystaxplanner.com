@@ -57,3 +57,31 @@ export function computeTodaySummary(board: BoardSlot[]): TodaySummary {
 
   return { dueToday, overdue, weekBills, weekTotal, habits, habitsRisk, nextAppointment };
 }
+
+// Names what's actually driving the count instead of a generic "N
+// things need you today" that leaves the user to reconcile it against
+// the stat tiles themselves (e.g. "3 things" next to "0 due today / 0
+// streaks at risk" reads as a contradiction until you realize the 3 are
+// overdue bills).
+export function summaryHeadline(dueToday: Card[], overdue: Card[]): string {
+  const total = dueToday.length + overdue.length;
+  if (total === 0) return "You're all caught up.";
+
+  const overdueBills = overdue.filter((c) => c.type === "bill").length;
+  const overdueOther = overdue.length - overdueBills;
+  const dueTodayBills = dueToday.filter((c) => c.type === "bill").length;
+  const dueTodayOther = dueToday.length - dueTodayBills;
+
+  const clauses: string[] = [];
+  if (overdueBills) clauses.push(`${overdueBills} overdue bill${overdueBills === 1 ? "" : "s"}`);
+  if (overdueOther) clauses.push(`${overdueOther} overdue item${overdueOther === 1 ? "" : "s"}`);
+  if (dueTodayBills) clauses.push(`${dueTodayBills} bill${dueTodayBills === 1 ? "" : "s"} due today`);
+  if (dueTodayOther) clauses.push(`${dueTodayOther} item${dueTodayOther === 1 ? "" : "s"} due today`);
+
+  if (clauses.length === 1) {
+    const isOverdue = overdueBills > 0 || overdueOther > 0;
+    const clause = clauses[0][0].toUpperCase() + clauses[0].slice(1);
+    return isOverdue ? `${clause} ${total === 1 ? "needs" : "need"} your attention.` : `${clause}.`;
+  }
+  return `${total} things need your attention: ${clauses.join(", ")}.`;
+}

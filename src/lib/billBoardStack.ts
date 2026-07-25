@@ -27,6 +27,7 @@ export interface BillGroup {
 
 export interface BoardBillSummary {
   totalDueSoon: number;
+  dueSoonCount: number;
   billCount: number;
   overdueCount: number;
   lines: { title: string; amount: number; overdue: boolean }[];
@@ -123,11 +124,12 @@ export function summarizeBillsForBoard(board: BoardSlot[], today = todayISO()): 
   groups.sort((a, b) => (a.nextDue?.date || "9999").localeCompare(b.nextDue?.date || "9999"));
 
   const totalDueSoon = groups.reduce((sum, g) => sum + (g.nextDue?.dueSoon ? g.nextDue.amount : 0), 0);
+  const dueSoonCount = groups.filter((g) => g.nextDue?.dueSoon).length;
   const overdueCount = groups.filter((g) => g.nextDue?.overdue).length;
   const lines = groups
     .filter((g) => g.nextDue)
     .slice(0, 3)
     .map((g) => ({ title: g.title, amount: g.nextDue!.amount, overdue: !!g.nextDue!.overdue }));
 
-  return { totalDueSoon, billCount: groups.length, overdueCount, lines, groups };
+  return { totalDueSoon, dueSoonCount, billCount: groups.length, overdueCount, lines, groups };
 }

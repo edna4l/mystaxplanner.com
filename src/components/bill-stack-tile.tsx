@@ -29,8 +29,8 @@ export function BillStackTile({
       <h3 className="card-title bill-stack-headline">{money(summary.totalDueSoon)} due soon</h3>
       <div className="prev">
         <span className="prev-sub">
-          {summary.billCount} bill{summary.billCount === 1 ? "" : "s"}
-          {summary.overdueCount ? ` • ${summary.overdueCount} overdue` : ""}
+          {summary.dueSoonCount} due soon · {summary.billCount} total
+          {summary.overdueCount ? ` · ${summary.overdueCount} overdue` : ""}
         </span>
         {summary.lines.slice(0, 2).map((l, i) => (
           <div className="prev-row between" key={i}>

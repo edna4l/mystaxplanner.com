@@ -18,9 +18,13 @@ export function CustomGroupStackTile({
   const T = typeMeta(group.type);
   const hues = Array(Math.min(group.cards.length, 3)).fill(T.hue);
   const upcoming = group.cards.filter((c) => c.date && c.date >= todayISO()).length;
-  const nextLabel = group.nextDate
-    ? (group.nextDate >= todayISO() ? "Next: " : "Last: ") + shortISO(group.nextDate)
+  const nextPart = group.nextDate
+    ? (group.nextDate >= todayISO() ? "Next " : "Last ") + shortISO(group.nextDate)
     : null;
+  // One combined line ("Next Aug 6 · 7 upcoming") instead of two
+  // separate ones — a count on its own line reads ambiguously (upcoming
+  // what, out of how many?).
+  const summaryLine = [nextPart, upcoming ? `${upcoming} upcoming` : null].filter(Boolean).join(" · ");
 
   return (
     <StackLayers hues={hues} onOpen={onOpen}>
@@ -30,8 +34,8 @@ export function CustomGroupStackTile({
       </div>
       <h3 className="card-title">{group.title}</h3>
       <div className="prev">
-        {nextLabel ? <span className="prev-sub">{nextLabel}</span> : null}
-        {upcoming ? <span className="prev-sub">{upcoming} upcoming</span> : null}
+        {summaryLine ? <span className="prev-sub">{summaryLine}</span> : null}
+        <span className="prev-sub">{group.cards.length} total</span>
         <span className="link-btn cg-review">View schedule →</span>
       </div>
     </StackLayers>

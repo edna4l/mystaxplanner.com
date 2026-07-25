@@ -312,29 +312,41 @@ export function BoardView({
         )
       ) : boardView === "Timeline" ? (
         monthGroups.length ? (
-          monthGroups.map((g) => (
-            <div key={g.key}>
-              <span className="section-label board-section-label">{g.label}</span>
-              <main className="board">{g.tiles.map((t) => t.node)}</main>
-            </div>
-          ))
+          <div className="timeline">
+            {monthGroups.map((g) => (
+              <div className="timeline-month" key={g.key}>
+                <div className="timeline-month-head">
+                  <span className="timeline-dot" />
+                  <span className="section-label">{g.label}</span>
+                </div>
+                <main className="board timeline-board">{g.tiles.map((t) => t.node)}</main>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="section-empty">No cards yet.</div>
         )
       ) : boardView === "Now/Next/Later" ? (
         nowTiles.length || nextTiles.length || laterTiles.length ? (
-          [
-            { key: "now", label: "Now", tiles: nowTiles },
-            { key: "next", label: "Next", tiles: nextTiles },
-            { key: "later", label: "Later", tiles: laterTiles },
-          ].map((g) =>
-            g.tiles.length ? (
-              <div key={g.key}>
-                <span className="section-label board-section-label">{g.label}</span>
-                <main className="board">{[...g.tiles].sort(cmpBy("date")).map((t) => t.node)}</main>
+          <div className="nnl-lanes">
+            {[
+              { key: "now", label: "Now", sub: "Urgent", tiles: nowTiles },
+              { key: "next", label: "Next", sub: "Upcoming", tiles: nextTiles },
+              { key: "later", label: "Later", sub: "Not urgent", tiles: laterTiles },
+            ].map((g) => (
+              <div className="nnl-lane" key={g.key}>
+                <div className="nnl-lane-head">
+                  <span className="section-label">{g.label}</span>
+                  <span className="nnl-lane-sub">{g.sub}</span>
+                </div>
+                {g.tiles.length ? (
+                  <main className="board nnl-lane-board">{[...g.tiles].sort(cmpBy("date")).map((t) => t.node)}</main>
+                ) : (
+                  <div className="nnl-lane-empty">Nothing here</div>
+                )}
               </div>
-            ) : null,
-          )
+            ))}
+          </div>
         ) : (
           <div className="section-empty">No cards yet.</div>
         )
