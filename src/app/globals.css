@@ -164,6 +164,17 @@ input, textarea { font-family: inherit; }
 .ob-title { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter-spacing: -0.02em; margin: 0 0 6px; }
 .ob-sub { font-size: 14.5px; color: var(--muted); line-height: 1.5; margin: 0 0 24px; max-width: 42ch; }
 .ob-section { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+/* Settings modal — collapsible section groups (Quick themes/Colors/Cards/Layout/Motion/Advanced) */
+.settings-group { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 4px; }
+.settings-group:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+.settings-group-head {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  border: none; background: transparent; cursor: pointer; padding: 10px 2px;
+  font-family: var(--font-display); font-weight: 700; font-size: 14.5px; color: var(--ink);
+}
+.settings-group-chevron { font-size: 12px; color: var(--muted); }
+.settings-group-body { padding-top: 4px; }
+.settings-group-body .ob-section:last-child { margin-bottom: 8px; }
 .ob-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 .ob-opt { text-transform: none; letter-spacing: 0; font-weight: 500; opacity: 0.7; margin-left: 4px; }
 .ob-input { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 12px; padding: 13px 15px; font-size: 16px; outline: none; transition: border-color .14s ease; }

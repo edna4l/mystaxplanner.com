@@ -69,6 +69,23 @@ function Seg<T extends string>({ value, options, onChange }: { value: T; options
   );
 }
 
+// Collapsible group for the Settings modal — open by default so nothing
+// is hidden on first look, but collapsible for anyone who just wants to
+// jump to one category (Quick themes / Colors / Cards / Layout / Motion
+// / Advanced).
+function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="settings-group">
+      <button className="settings-group-head" onClick={() => setOpen((o) => !o)}>
+        <span>{title}</span>
+        <span className="settings-group-chevron">{open ? "▾" : "▸"}</span>
+      </button>
+      {open ? <div className="settings-group-body">{children}</div> : null}
+    </div>
+  );
+}
+
 export function SettingsModal({
   profile, onClose, onSaveProfile, onSaveTweaks,
 }: {
@@ -107,76 +124,92 @@ export function SettingsModal({
           <span className="ob-label">Avatar</span>
           <AvatarEdit profile={draft} onChange={(patch) => { setDraft({ ...draft, ...patch }); onSaveProfile(patch); }} />
         </div>
-        <div className="ob-section">
-          <span className="ob-label">Look</span>
-          <PresetGrid current={profile.preset_id} onPick={pickPreset} />
-        </div>
-        <div className="ob-section">
-          <span className="ob-label">Accent color</span>
-          <AccentRow value={profile.accent} onPick={pickAccent} />
-          <HueWheel value={profile.accent ?? 0} onChange={pickAccent} />
-        </div>
-        <div className="ob-section">
-          <span className="ob-label">Card colors</span>
-          <div className="type-color-grid">
-            {Object.values(BUILTIN_CARD_TYPES).map((def) => (
-              <div className="type-color-row" key={def.key}>
-                <span className="type-color-label">{def.label}</span>
-                <div className="type-color-pickers">
-                  <AccentRow
-                    value={t.typeHues[def.key] ?? def.hue}
-                    onPick={(hue) => onSaveTweaks({ typeHues: { ...t.typeHues, [def.key]: hue } })}
-                  />
-                  <HueWheel
-                    value={t.typeHues[def.key] ?? def.hue}
-                    onChange={(hue) => onSaveTweaks({ typeHues: { ...t.typeHues, [def.key]: hue } })}
-                  />
-                </div>
-              </div>
-            ))}
+        <SettingsSection title="Quick themes">
+          <div className="ob-section">
+            <span className="ob-label">Look</span>
+            <PresetGrid current={profile.preset_id} onPick={pickPreset} />
           </div>
-        </div>
-        <div className="ob-section">
-          <span className="ob-label">Card look</span>
-          <Seg value={t.cardVariant} options={["Flat", "Gradient"]} onChange={(v) => onSaveTweaks({ cardVariant: v })} />
-          <span className="ob-hint">Gradient adds a soft depth gradient throughout the app — Board, Today, Calendar, Bills, the card editor, search, Focus Deck — plus a subtle glow on drag targets and hovered stacks, using whatever colors are set above. New accounts start with this on; switch to Flat any time for the plain look.</span>
-        </div>
+          <div className="ob-section">
+            <span className="ob-label">Appearance</span>
+            <Seg value={t.appearance} options={["Light", "Dark"]} onChange={(v) => onSaveTweaks({ appearance: v })} />
+          </div>
+        </SettingsSection>
 
-        <div className="ob-section">
-          <span className="ob-label">Appearance</span>
-          <Seg value={t.appearance} options={["Light", "Dark"]} onChange={(v) => onSaveTweaks({ appearance: v })} />
-        </div>
-        <div className="ob-section">
-          <span className="ob-label">Card style</span>
-          <Seg value={t.cardStyle} options={["Paper", "Flat", "Outline"]} onChange={(v) => onSaveTweaks({ cardStyle: v })} />
-        </div>
-        <div className="ob-section">
-          <span className="ob-label">Background</span>
-          <Seg value={t.bgTone} options={["Warm", "Cool", "Neutral"]} onChange={(v) => onSaveTweaks({ bgTone: v })} />
-        </div>
-        <div className="ob-section">
-          <span className="ob-label">Density</span>
-          <Seg value={t.density} options={["Compact", "Regular", "Comfy"]} onChange={(v) => onSaveTweaks({ density: v })} />
-        </div>
-        <div className="ob-section">
-          <span className="ob-label">Font</span>
-          <Seg value={t.fontPair} options={["Friendly", "Modern", "Classic"]} onChange={(v) => onSaveTweaks({ fontPair: v })} />
-        </div>
-        <div className="ob-section">
-          <span className="ob-label">Expand animation</span>
-          <Seg value={t.expandStyle} options={["Grow", "Pop", "Slide"]} onChange={(v) => onSaveTweaks({ expandStyle: v })} />
-        </div>
-        <div className="ob-section">
-          <label className="ob-label" style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-            <input type="checkbox" checked={t.showType} onChange={(e) => onSaveTweaks({ showType: e.target.checked })} />
-            Show type labels on cards
-          </label>
-        </div>
-        <div className="ob-section">
-          <span className="ob-label">Corner radius — {t.radius}px</span>
-          <input type="range" min={4} max={28} step={1} value={t.radius}
-            onChange={(e) => onSaveTweaks({ radius: Number(e.target.value) })} style={{ width: "100%" }} />
-        </div>
+        <SettingsSection title="Colors">
+          <div className="ob-section">
+            <span className="ob-label">Accent color</span>
+            <AccentRow value={profile.accent} onPick={pickAccent} />
+            <HueWheel value={profile.accent ?? 0} onChange={pickAccent} />
+          </div>
+          <div className="ob-section">
+            <span className="ob-label">Card colors</span>
+            <div className="type-color-grid">
+              {Object.values(BUILTIN_CARD_TYPES).map((def) => (
+                <div className="type-color-row" key={def.key}>
+                  <span className="type-color-label">{def.label}</span>
+                  <div className="type-color-pickers">
+                    <AccentRow
+                      value={t.typeHues[def.key] ?? def.hue}
+                      onPick={(hue) => onSaveTweaks({ typeHues: { ...t.typeHues, [def.key]: hue } })}
+                    />
+                    <HueWheel
+                      value={t.typeHues[def.key] ?? def.hue}
+                      onChange={(hue) => onSaveTweaks({ typeHues: { ...t.typeHues, [def.key]: hue } })}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="ob-section">
+            <span className="ob-label">Background</span>
+            <Seg value={t.bgTone} options={["Warm", "Cool", "Neutral"]} onChange={(v) => onSaveTweaks({ bgTone: v })} />
+          </div>
+        </SettingsSection>
+
+        <SettingsSection title="Cards">
+          <div className="ob-section">
+            <span className="ob-label">Card look</span>
+            <Seg value={t.cardVariant} options={["Flat", "Gradient"]} onChange={(v) => onSaveTweaks({ cardVariant: v })} />
+            <span className="ob-hint">Gradient adds a soft depth gradient throughout the app — Board, Today, Calendar, Bills, the card editor, search, Focus Deck — plus a subtle glow on drag targets and hovered stacks, using whatever colors are set above. New accounts start with this on; switch to Flat any time for the plain look.</span>
+          </div>
+          <div className="ob-section">
+            <span className="ob-label">Card style</span>
+            <Seg value={t.cardStyle} options={["Paper", "Flat", "Outline"]} onChange={(v) => onSaveTweaks({ cardStyle: v })} />
+          </div>
+          <div className="ob-section">
+            <label className="ob-label" style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <input type="checkbox" checked={t.showType} onChange={(e) => onSaveTweaks({ showType: e.target.checked })} />
+              Show type labels on cards
+            </label>
+          </div>
+        </SettingsSection>
+
+        <SettingsSection title="Layout">
+          <div className="ob-section">
+            <span className="ob-label">Density</span>
+            <Seg value={t.density} options={["Compact", "Regular", "Comfy"]} onChange={(v) => onSaveTweaks({ density: v })} />
+          </div>
+          <div className="ob-section">
+            <span className="ob-label">Font</span>
+            <Seg value={t.fontPair} options={["Friendly", "Modern", "Classic"]} onChange={(v) => onSaveTweaks({ fontPair: v })} />
+          </div>
+        </SettingsSection>
+
+        <SettingsSection title="Motion">
+          <div className="ob-section">
+            <span className="ob-label">Expand animation</span>
+            <Seg value={t.expandStyle} options={["Grow", "Pop", "Slide"]} onChange={(v) => onSaveTweaks({ expandStyle: v })} />
+          </div>
+        </SettingsSection>
+
+        <SettingsSection title="Advanced">
+          <div className="ob-section">
+            <span className="ob-label">Corner radius — {t.radius}px</span>
+            <input type="range" min={4} max={28} step={1} value={t.radius}
+              onChange={(e) => onSaveTweaks({ radius: Number(e.target.value) })} style={{ width: "100%" }} />
+          </div>
+        </SettingsSection>
       </div>
     </div>
   );
