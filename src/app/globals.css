@@ -583,8 +583,26 @@ input, textarea { font-family: inherit; }
 .bcat-group { display: flex; flex-direction: column; gap: 2px; }
 @media (max-width: 640px) {
   .bills-stats { grid-template-columns: 1fr; }
-  .brow { grid-template-columns: 22px 1.4fr 0.8fr 0.8fr; }
-  .brow-cat, .brow-note, .brow-due, .brow-amt-due, .brow-check, .brow-h span:nth-child(3), .brow-h span:nth-child(4), .brow-h span:nth-child(5), .brow-h span:nth-child(8) { display: none; }
+  /* A real mobile layout instead of cropping the desktop table down to
+     fewer columns — two stacked lines (title+amount, then due date)
+     plus the paydot and bulk-select checkbox as full-height rails, so
+     the due date and amount owed stay visible instead of disappearing. */
+  .brow {
+    grid-template-columns: 24px 1fr auto 20px;
+    grid-template-areas: "dot title amt check" "dot meta amt check";
+    row-gap: 4px;
+    column-gap: 10px;
+    padding: 12px;
+  }
+  .brow .paydot { grid-area: dot; align-self: center; }
+  .brow-name { grid-area: title; font-size: 14px; }
+  .brow-check { grid-area: check; align-self: center; }
+  .brow-cat, .brow-note { display: none; }
+  .brow-due { grid-area: meta; display: block; text-align: left; font-size: 12px; color: var(--muted); }
+  .brow-amt-due, .brow-amt-paid { grid-area: amt; align-self: center; font-size: 14px; }
+  .brow:not(.brow-paid) .brow-amt-paid { display: none; }
+  .brow-paid .brow-amt-due { display: none; }
+  .brow-h { display: none; }
 }
 
 /* ---------- generic section view ---------- */
