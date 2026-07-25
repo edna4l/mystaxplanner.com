@@ -58,6 +58,17 @@ function monthLabel(dateKey: string): string {
   return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
 }
 
+function BoardEmpty({ onAdd }: { onAdd: () => void }) {
+  return (
+    <div className="board-empty">
+      <span className="board-empty-icon" aria-hidden="true">🗂️</span>
+      <h3 className="board-empty-title">Your board is empty</h3>
+      <p className="board-empty-sub">Bills, tasks, habits, notes — everything you add lands here as a card.</p>
+      <button className="cover-add-btn" onClick={onAdd}>+ Add your first card</button>
+    </div>
+  );
+}
+
 export function BoardView({
   board,
   onOpenCard,
@@ -70,6 +81,7 @@ export function BoardView({
   onChangeBoardView,
   dismissedSuggestions,
   onDismissSuggestion,
+  onAdd,
 }: {
   board: BoardSlot[];
   onOpenCard: (card: Card, rect: DOMRect | null) => void;
@@ -82,6 +94,7 @@ export function BoardView({
   onChangeBoardView: (mode: BoardMode) => void;
   dismissedSuggestions: string[];
   onDismissSuggestion: (key: string) => void;
+  onAdd: () => void;
 }) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -118,7 +131,7 @@ export function BoardView({
   }
 
   if (!board.length) {
-    return <main className="board"><div className="section-empty">No cards yet — tap “+ New card” to start.</div></main>;
+    return <main className="board"><BoardEmpty onAdd={onAdd} /></main>;
   }
 
   function slotTile(s: BoardSlot, wide?: boolean) {
@@ -308,7 +321,7 @@ export function BoardView({
         sortedFlat.length ? (
           <main className="board">{sortedFlat.map((t) => t.node)}</main>
         ) : (
-          <div className="section-empty">No cards yet.</div>
+          <main className="board"><BoardEmpty onAdd={onAdd} /></main>
         )
       ) : boardView === "Timeline" ? (
         monthGroups.length ? (
@@ -324,7 +337,7 @@ export function BoardView({
             ))}
           </div>
         ) : (
-          <div className="section-empty">No cards yet.</div>
+          <main className="board"><BoardEmpty onAdd={onAdd} /></main>
         )
       ) : boardView === "Now/Next/Later" ? (
         nowTiles.length || nextTiles.length || laterTiles.length ? (
@@ -348,9 +361,9 @@ export function BoardView({
             ))}
           </div>
         ) : (
-          <div className="section-empty">No cards yet.</div>
+          <main className="board"><BoardEmpty onAdd={onAdd} /></main>
         )
-      ) : (
+      ) : hasAnyTiles ? (
         <>
           {sortedStacks.length ? (
             <>
@@ -365,6 +378,8 @@ export function BoardView({
             </>
           ) : null}
         </>
+      ) : (
+        <main className="board"><BoardEmpty onAdd={onAdd} /></main>
       )}
     </>
   );

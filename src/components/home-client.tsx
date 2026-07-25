@@ -369,6 +369,7 @@ export default function HomeClient() {
           onChangeBoardView={(v) => updateTweaks({ boardView: v })}
           dismissedSuggestions={profile?.tweaks.dismissedSuggestions ?? []}
           onDismissSuggestion={(key) => updateTweaks({ dismissedSuggestions: [...(profile?.tweaks.dismissedSuggestions ?? []), key] })}
+          onAdd={() => { setPendingDate(null); setAddOpen(true); }}
         />
       ) : view === "calendar" ? (
         <CalendarView
