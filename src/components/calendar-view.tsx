@@ -4,11 +4,13 @@
 // multiples layer into a cluster. Drag a reusable (undated) card onto a
 // day to stamp a dated copy there, or drag a dated card onto another day
 // to reschedule it.
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { BoardSlot, Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
-import { parseISO, toISODate } from "@/lib/date";
+import { parseISO, toISODate, money } from "@/lib/date";
+import { overdueLabel } from "@/lib/bills";
 import { expandRecurringBills } from "@/lib/recurrence";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MON = [
@@ -16,15 +18,127 @@ const MON = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+// Mouse hover (and, since Safari maps Apple Pencil hover to the same
+// mouse events, a hovering stylus on iPad) shows this after a short
+// delay. Touch has no hover concept, so it gets a long-press instead —
+// same 320ms-hold/10px-move-cancels timing board-view.tsx already uses
+// for its touch drag, so a "hold to peek" feels consistent with a
+// "hold to drag" elsewhere in the app. Either way this never fully
+// opens the card — it's peek-and-let-go, not a substitute for it.
+const HOVER_DELAY = 220;
+const LONG_PRESS_MS = 380;
+const MOVE_CANCEL_PX = 10;
+
+function CalendarEntryPreview({ card, rect }: { card: Card; rect: DOMRect }) {
+  const T = typeMeta(card.type);
+  const width = 250;
+  const gap = 10;
+  const left = Math.min(Math.max(gap, rect.left), window.innerWidth - width - gap);
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const top = spaceBelow > 190 ? rect.bottom + gap : Math.max(gap, rect.top - gap - 170);
+  const checklistTotal = card.checklist?.length ?? 0;
+  const checklistDone = card.checklist?.filter((i) => i.done).length ?? 0;
+  const overdue = card.type === "bill" ? overdueLabel(card) : null;
+  return (
+    <div
+      className="cal-preview"
+      style={{ "--hue": T.hue, top, left, width } as React.CSSProperties}
+      // Prevents a touch-preview's underlying finger-down from also
+      // being read as a click on whatever's behind the popover.
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+    >
+      <span className="type-tag"><span className="swatch" />{T.label}</span>
+      <strong className="cal-preview-title">{card.title}</strong>
+      {card.type === "bill" && card.amount != null ? (
+        <span className="prev-sub">
+          <b className="mono">{money(card.amount)}</b>
+          {card.category ? ` · ${card.category}` : ""}
+          {card.paid ? " · Paid" : overdue ? ` · ${overdue}` : card.due ? ` · Due ${card.due}` : ""}
+        </span>
+      ) : null}
+      {card.type === "habit" ? (
+        <span className="prev-sub">Current streak: <b className="mono">{card.streak || 0}</b> days</span>
+      ) : null}
+      {(card.type === "task" || card.type === "project") && checklistTotal > 0 ? (
+        <span className="prev-sub"><b className="mono">{checklistDone}/{checklistTotal}</b> steps done</span>
+      ) : null}
+      {card.scheduled_time ? <span className="prev-sub mono">{card.scheduled_time}</span> : null}
+      {(card.type === "task" || card.type === "project") && card.due ? (
+        <span className="prev-sub">Due {card.due}</span>
+      ) : null}
+      {card.notes ? <p className="prev-note">{card.notes}</p> : card.body ? <p className="prev-note">{card.body}</p> : null}
+    </div>
+  );
+}
+
 // Shows up to 2 compact single-line entries per day, with a "+N more"
 // indicator for the rest — full details are one click away (opens the
 // single card, or a DayFan for multiple). Dragging is only enabled when
 // the cell holds exactly one card, since a multi-card cell's entries
 // aren't individually draggable targets yet.
-function DayCluster({ cards, onClick, onDragCard }: { cards: Card[]; onClick: () => void; onDragCard: (e: React.DragEvent, id: string) => void }) {
+function DayCluster({
+  cards, onClick, onDragCard, onPeek, onPeekEnd,
+}: {
+  cards: Card[];
+  onClick: () => void;
+  onDragCard: (e: React.DragEvent, id: string) => void;
+  onPeek: (card: Card, rect: DOMRect) => void;
+  onPeekEnd: () => void;
+}) {
   const visible = cards.slice(0, 2);
   const overflow = cards.length - visible.length;
   const single = cards.length === 1;
+  const hoverTimer = useRef<number | null>(null);
+  const touchTimer = useRef<number | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const longPressFired = useRef(false);
+
+  function clearHoverTimer() {
+    if (hoverTimer.current != null) { window.clearTimeout(hoverTimer.current); hoverTimer.current = null; }
+  }
+  function clearTouchTimer() {
+    if (touchTimer.current != null) { window.clearTimeout(touchTimer.current); touchTimer.current = null; }
+  }
+  function startHover(e: React.MouseEvent<HTMLDivElement>, card: Card) {
+    clearHoverTimer();
+    const rect = e.currentTarget.getBoundingClientRect();
+    hoverTimer.current = window.setTimeout(() => onPeek(card, rect), HOVER_DELAY);
+  }
+  function endHover() {
+    clearHoverTimer();
+    onPeekEnd();
+  }
+  function startTouch(e: React.TouchEvent<HTMLDivElement>, card: Card) {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+    longPressFired.current = false;
+    const rect = e.currentTarget.getBoundingClientRect();
+    clearTouchTimer();
+    touchTimer.current = window.setTimeout(() => {
+      longPressFired.current = true;
+      onPeek(card, rect);
+    }, LONG_PRESS_MS);
+  }
+  function moveTouch(e: React.TouchEvent<HTMLDivElement>) {
+    if (!touchStart.current || touchTimer.current == null) return;
+    const t = e.touches[0];
+    const dx = t.clientX - touchStart.current.x;
+    const dy = t.clientY - touchStart.current.y;
+    if (Math.hypot(dx, dy) > MOVE_CANCEL_PX) clearTouchTimer();
+  }
+  function endTouch(e: React.TouchEvent<HTMLDivElement>) {
+    clearTouchTimer();
+    if (longPressFired.current) {
+      // Held long enough to peek — release just closes the peek instead
+      // of also opening the card, the same way an iOS long-press-peek
+      // doesn't act like a plain tap once it's triggered.
+      e.preventDefault();
+      onPeekEnd();
+      longPressFired.current = false;
+    }
+  }
+
   return (
     <div className="cal-cluster" onClick={onClick}>
       {visible.map((c) => {
@@ -35,7 +149,13 @@ function DayCluster({ cards, onClick, onDragCard }: { cards: Card[]; onClick: ()
             className={"cal-entry" + (single ? " cal-drag" : "")}
             style={{ "--hue": T.hue } as React.CSSProperties}
             draggable={single}
-            onDragStart={single ? (e) => { e.stopPropagation(); onDragCard(e, c.id); } : undefined}
+            onDragStart={single ? (e) => { e.stopPropagation(); onPeekEnd(); onDragCard(e, c.id); } : undefined}
+            onMouseEnter={(e) => startHover(e, c)}
+            onMouseLeave={endHover}
+            onTouchStart={(e) => startTouch(e, c)}
+            onTouchMove={moveTouch}
+            onTouchEnd={endTouch}
+            onTouchCancel={endTouch}
           >
             <span className="swatch" />
             {c.cover?.kind === "emoji" ? <span className="cal-emoji">{c.cover.val}</span> : null}
@@ -69,6 +189,8 @@ export function CalendarView({
   const [vy, setVy] = useState(init.getFullYear());
   const [vm, setVm] = useState(init.getMonth());
   const [dropDay, setDropDay] = useState<number | null>(null);
+  const [peek, setPeek] = useState<{ card: Card; rect: DOMRect } | null>(null);
+  useEscapeKey(() => setPeek(null));
 
   const allCards = useMemo(() => {
     const out: Card[] = [];
@@ -107,8 +229,8 @@ export function CalendarView({
 
   const isToday = (d: number) => init.getFullYear() === vy && init.getMonth() === vm && init.getDate() === d;
 
-  function prev() { if (vm === 0) { setVm(11); setVy(vy - 1); } else setVm(vm - 1); }
-  function next() { if (vm === 11) { setVm(0); setVy(vy + 1); } else setVm(vm + 1); }
+  function prev() { setPeek(null); if (vm === 0) { setVm(11); setVy(vy - 1); } else setVm(vm - 1); }
+  function next() { setPeek(null); if (vm === 11) { setVm(0); setVy(vy + 1); } else setVm(vm + 1); }
 
   function openDay(d: number, cards: Card[]) {
     if (cards.length === 1) onOpenCard(cards[0]);
@@ -158,7 +280,13 @@ export function CalendarView({
                   <button className="cal-add" title="Add a card on this day" onClick={() => onAddOnDate(toISODate(vy, vm, d))}>+</button>
                 </div>
                 {byDay[d] ? (
-                  <DayCluster cards={byDay[d]} onClick={() => openDay(d, byDay[d])} onDragCard={(e, id) => startDrag(e, id, "day")} />
+                  <DayCluster
+                    cards={byDay[d]}
+                    onClick={() => openDay(d, byDay[d])}
+                    onDragCard={(e, id) => startDrag(e, id, "day")}
+                    onPeek={(card, rect) => setPeek({ card, rect })}
+                    onPeekEnd={() => setPeek(null)}
+                  />
                 ) : null}
               </>
             ) : null}
@@ -189,6 +317,7 @@ export function CalendarView({
           <button className="cal-chip-add" onClick={onAddReusable}>+ New reusable card</button>
         </div>
       </div>
+      {peek ? <CalendarEntryPreview card={peek.card} rect={peek.rect} /> : null}
     </div>
   );
 }
