@@ -6,10 +6,17 @@
 import { useState } from "react";
 import type { Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
+import { todayISO } from "@/lib/date";
 import { CoverPicker } from "@/components/cover-picker";
 import { SensitiveWarning } from "@/components/sensitive-warning";
 import { useEscapeKey } from "@/lib/useEscapeKey";
 import * as fx from "@/lib/fx";
+
+export interface BillPlannerPrefs {
+  hidden: boolean;
+  remind: boolean;
+  forced: boolean;
+}
 
 function pct(checklist: Card["checklist"]) {
   if (!checklist || !checklist.length) return 0;
@@ -61,11 +68,17 @@ function Checklist({ items, onChange }: { items: Card["checklist"]; onChange: (v
 
 function ExpandedBody({
   card, onUpdate, isSeriesMember, onUpdateSeries,
+  plannerPrefs, onTogglePlannerPref, scheduledPayment, onSchedulePayment, onClearScheduledPayment,
 }: {
   card: Card;
   onUpdate: (patch: Partial<Card>) => void;
   isSeriesMember?: boolean;
   onUpdateSeries?: (patch: Partial<Card>) => void;
+  plannerPrefs?: BillPlannerPrefs;
+  onTogglePlannerPref?: (key: keyof BillPlannerPrefs, value: boolean) => void;
+  scheduledPayment?: { date: string; time: string } | null;
+  onSchedulePayment?: (date: string, time: string) => void;
+  onClearScheduledPayment?: () => void;
 }) {
   const [applyToSeries, setApplyToSeries] = useState(false);
   function updateAccountField(patch: Partial<Card>) {
@@ -196,6 +209,49 @@ function ExpandedBody({
         <label className="field"><span className="field-label">Calendar date</span>
           <input className="inp" type="date" value={card.date || ""} onChange={(e) => onUpdate({ date: e.target.value })} />
         </label>
+
+        {plannerPrefs && onTogglePlannerPref ? (
+          <div className="field bill-planner">
+            <span className="field-label">Planner</span>
+            <label className="bill-planner-row">
+              <input type="checkbox" checked={plannerPrefs.forced} onChange={(e) => onTogglePlannerPref("forced", e.target.checked)} />
+              Add payment task to Planner
+            </label>
+            <span className="ob-hint">Shows this bill's payment in Financial Actions right now, even if it isn&rsquo;t due soon yet.</span>
+
+            <label className="bill-planner-row">
+              <input type="checkbox" checked={plannerPrefs.remind} onChange={(e) => onTogglePlannerPref("remind", e.target.checked)} />
+              Remind me on due date
+            </label>
+            <span className="ob-hint">Skips the early &ldquo;due soon&rdquo; warning — this only appears in Financial Actions once it&rsquo;s actually due or overdue.</span>
+
+            <label className="bill-planner-row">
+              <input type="checkbox" checked={plannerPrefs.hidden} onChange={(e) => onTogglePlannerPref("hidden", e.target.checked)} />
+              Do not show in Planner
+            </label>
+            <span className="ob-hint">Autopay bills are already hidden from Financial Actions by default — use this for any bill you never want to see there.</span>
+
+            {onSchedulePayment ? (
+              <div className="bill-schedule-payment">
+                <span className="field-label">Schedule payment</span>
+                <div className="two">
+                  <input
+                    className="inp" type="date" value={scheduledPayment?.date || ""}
+                    onChange={(e) => e.target.value && onSchedulePayment(e.target.value, scheduledPayment?.time || "09:00")}
+                  />
+                  <input
+                    className="inp" type="time" value={scheduledPayment?.time || ""}
+                    onChange={(e) => e.target.value && onSchedulePayment(scheduledPayment?.date || todayISO(), e.target.value)}
+                  />
+                </div>
+                <span className="ob-hint">When you&rsquo;ll actually pay it — independent of the due date above, and doesn&rsquo;t change it. Also settable by dragging this bill&rsquo;s Financial Action chip onto an hour in Planner.</span>
+                {scheduledPayment && onClearScheduledPayment ? (
+                  <button className="link-btn" onClick={onClearScheduledPayment}>Clear scheduled payment</button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -247,6 +303,11 @@ export function ExpandedCard({
   onStopRecurrence,
   skipped,
   onRestoreOccurrence,
+  plannerPrefs,
+  onTogglePlannerPref,
+  scheduledPayment,
+  onSchedulePayment,
+  onClearScheduledPayment,
 }: {
   card: Card;
   onClose: () => void;
@@ -258,6 +319,11 @@ export function ExpandedCard({
   onStopRecurrence?: () => void;
   skipped?: Card[];
   onRestoreOccurrence?: (id: string) => void;
+  plannerPrefs?: BillPlannerPrefs;
+  onTogglePlannerPref?: (key: keyof BillPlannerPrefs, value: boolean) => void;
+  scheduledPayment?: { date: string; time: string } | null;
+  onSchedulePayment?: (date: string, time: string) => void;
+  onClearScheduledPayment?: () => void;
 }) {
   const T = typeMeta(card.type);
   useEscapeKey(onClose);
@@ -278,7 +344,11 @@ export function ExpandedCard({
           placeholder="Untitled"
         />
         <CoverPicker card={card} onUpdate={onUpdate} />
-        <ExpandedBody card={card} onUpdate={onUpdate} isSeriesMember={!!series} onUpdateSeries={onUpdateSeries} />
+        <ExpandedBody
+          card={card} onUpdate={onUpdate} isSeriesMember={!!series} onUpdateSeries={onUpdateSeries}
+          plannerPrefs={plannerPrefs} onTogglePlannerPref={onTogglePlannerPref}
+          scheduledPayment={scheduledPayment} onSchedulePayment={onSchedulePayment} onClearScheduledPayment={onClearScheduledPayment}
+        />
         {series ? (
           <div className="series-actions">
             {!series.isRoot ? (

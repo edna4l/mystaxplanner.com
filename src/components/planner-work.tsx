@@ -18,7 +18,7 @@ import type { BoardSlot, Card } from "@/lib/types";
 import { typeMeta } from "@/lib/cardTypes";
 import { todayISO, shortISO, addDaysISO } from "@/lib/date";
 import { allCards, unscheduledCards, weekDates } from "@/lib/plannerData";
-import { HourlySchedule, DayColumn, WD_LABEL, WD_HUE } from "@/components/planner-shared";
+import { HourlySchedule, DayColumn, WD_LABEL, WD_HUE, type DragItem } from "@/components/planner-shared";
 
 function pct(checklist: Card["checklist"]) {
   if (!checklist || !checklist.length) return 0;
@@ -38,7 +38,7 @@ export function PlannerWork({
   onOpenCard: (card: Card, rect: DOMRect | null) => void;
   onUpdateCard: (id: string, patch: Partial<Card>) => void;
 }) {
-  const [dragCardId, setDragCardId] = useState<string | null>(null);
+  const [dragItem, setDragItem] = useState<DragItem | null>(null);
   const today = todayISO();
   const weekdays = useMemo(() => weekDates(today).slice(0, 5), [today]);
   const workFilter = (c: Card) => c.type === "project" || c.type === "task";
@@ -102,7 +102,7 @@ export function PlannerWork({
         </div>
         <aside className="pl-rail">
           <span className="section-label">Today&rsquo;s schedule</span>
-          <HourlySchedule dateISO={today} board={board} onUpdateCard={onUpdateCard} onOpenCard={onOpenCard} dragCardId={dragCardId} onDragCardChange={setDragCardId} />
+          <HourlySchedule dateISO={today} board={board} onUpdateCard={onUpdateCard} onOpenCard={onOpenCard} dragItem={dragItem} onDragItemChange={setDragItem} />
         </aside>
       </div>
 
@@ -120,8 +120,8 @@ export function PlannerWork({
                 className="pl-tray-card"
                 style={{ "--hue": T.hue } as React.CSSProperties}
                 draggable
-                onDragStart={() => setDragCardId(c.id)}
-                onDragEnd={() => setDragCardId(null)}
+                onDragStart={() => setDragItem({ kind: "card", id: c.id })}
+                onDragEnd={() => setDragItem(null)}
                 onClick={(e) => onOpenCard(c, e.currentTarget.getBoundingClientRect())}
               >
                 <span className="swatch" />

@@ -1090,6 +1090,13 @@ input, textarea { font-family: inherit; }
 .body-row { display: flex; align-items: center; gap: 10px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .series-scope { background: color-mix(in oklab, var(--ink) 5%, transparent); border: 1px solid var(--faint); border-radius: 12px; padding: 10px 12px; }
+.bill-planner {
+  background: color-mix(in oklab, var(--ink) 4%, transparent); border: 1px solid var(--faint); border-radius: 12px;
+  padding: 12px 14px; gap: 6px;
+}
+.bill-planner-row { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; text-transform: none; letter-spacing: normal; }
+.bill-planner .ob-hint { margin: -2px 0 4px 24px; }
+.bill-schedule-payment { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--faint); }
 .field-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 .inp {
   width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
@@ -1473,6 +1480,20 @@ input, textarea { font-family: inherit; }
 }
 .pl-tray-card:active { cursor: grabbing; }
 .pl-tray-card-title { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-tray-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.pl-tray-filters .filter-chip { padding: 5px 12px; font-size: 12px; }
+.pl-tray-group { border: none; font-family: inherit; cursor: pointer; }
+/* Financial actions — deliberately red/amber, distinct from the
+   type-hue tray cards, so a payment reads as "needs money attention"
+   rather than blending in as just another schedulable item. */
+.pl-fin-strip { background: oklch(0.96 0.03 40); border: 1px solid oklch(0.75 0.09 40); border-radius: 18px; padding: 14px; }
+.pl-fin-card {
+  display: flex; align-items: center; gap: 6px; background: oklch(0.93 0.07 35); border: 1px solid oklch(0.72 0.12 30);
+  border-radius: 999px; padding: 7px 13px; cursor: grab; font-size: 12.5px; font-weight: 600; color: oklch(0.32 0.1 30);
+}
+.pl-fin-card:active { cursor: grabbing; }
+.pl-fin-card .swatch { background: oklch(0.55 0.16 30); }
+.pl-fin-status { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: oklch(0.5 0.15 30); }
 
 @media (max-width: 1100px) {
   .pl-body { flex-direction: column; }

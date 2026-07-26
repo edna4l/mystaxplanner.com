@@ -6,6 +6,7 @@
 // reads, never a second store of information. All 8 tabs are built.
 import { useState } from "react";
 import type { BoardSlot, Card } from "@/lib/types";
+import type { Tweaks } from "@/lib/theme";
 import { PlannerIndex } from "@/components/planner-index";
 import { PlannerPlan } from "@/components/planner-plan";
 import { PlannerFocus } from "@/components/planner-focus";
@@ -30,16 +31,20 @@ const TABS: { key: PlannerTab; label: string; hue: number }[] = [
 
 export function PlannerView({
   board,
+  tweaks,
   onOpenCard,
   onUpdateCard,
+  onUpdateTweaks,
   onGo,
   onStartFocusDeck,
   onOpenDailyReset,
   onStampCard,
 }: {
   board: BoardSlot[];
+  tweaks: Tweaks;
   onOpenCard: (card: Card, rect: DOMRect | null) => void;
   onUpdateCard: (id: string, patch: Partial<Card>) => void;
+  onUpdateTweaks: (patch: Partial<Tweaks>) => void;
   onGo: (dest: "bills" | "board" | "calendar") => void;
   onStartFocusDeck: () => void;
   onOpenDailyReset: () => void;
@@ -65,7 +70,7 @@ export function PlannerView({
         {tab === "index" ? (
           <PlannerIndex board={board} onOpenCard={onOpenCard} onGo={onGo} onOpenTab={setTab} onStartFocusDeck={onStartFocusDeck} />
         ) : tab === "plan" ? (
-          <PlannerPlan board={board} onOpenCard={onOpenCard} onUpdateCard={onUpdateCard} />
+          <PlannerPlan board={board} tweaks={tweaks} onOpenCard={onOpenCard} onUpdateCard={onUpdateCard} onUpdateTweaks={onUpdateTweaks} />
         ) : tab === "focus" ? (
           <PlannerFocus board={board} onOpenCard={onOpenCard} onStartFocusDeck={onStartFocusDeck} onOpenDailyReset={onOpenDailyReset} />
         ) : tab === "work" ? (

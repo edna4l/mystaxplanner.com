@@ -6,6 +6,7 @@
 // up, instead of drifting across copies.
 import { useMemo, useState } from "react";
 import type { BoardSlot, Card } from "@/lib/types";
+import type { Tweaks } from "@/lib/theme";
 import { typeMeta } from "@/lib/cardTypes";
 import { money } from "@/lib/date";
 import { cardsForDate } from "@/lib/plannerData";
@@ -17,6 +18,12 @@ export const WD_LABEL = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 // weekday would paint a different color every week, which reads as
 // arbitrary instead of a stable, learnable rhythm.
 export const WD_HUE = [30, 330, 210, 280, 190, 150, 55];
+
+// What's being dragged onto an hour — a real card (dropping sets its
+// own date/scheduled_time) or a Financial Action chip (dropping only
+// ever writes to Tweaks.paymentSchedule, never the bill's own date —
+// see src/lib/plannerData.ts's financialActions()).
+export type DragItem = { kind: "card"; id: string } | { kind: "payment"; billId: string };
 
 export function hourLabel(h: number): string {
   const period = h < 12 ? "AM" : "PM";
@@ -67,17 +74,19 @@ function ScheduleRow({
 }
 
 export function HourlySchedule({
-  dateISO, board, onUpdateCard, onOpenCard, dragCardId, onDragCardChange,
+  dateISO, board, onUpdateCard, onOpenCard, dragItem, onDragItemChange, paymentSchedule, onSchedulePayment,
 }: {
   dateISO: string;
   board: BoardSlot[];
   onUpdateCard: (id: string, patch: Partial<Card>) => void;
   onOpenCard: (card: Card, rect: DOMRect | null) => void;
-  dragCardId: string | null;
-  onDragCardChange: (id: string | null) => void;
+  dragItem: DragItem | null;
+  onDragItemChange: (item: DragItem | null) => void;
+  paymentSchedule?: Tweaks["paymentSchedule"];
+  onSchedulePayment?: (billId: string, date: string, time: string) => void;
 }) {
   const [overHour, setOverHour] = useState<number | null>(null);
-  const dayCards = useMemo(() => cardsForDate(board, dateISO), [board, dateISO]);
+  const dayCards = useMemo(() => cardsForDate(board, dateISO, paymentSchedule), [board, dateISO, paymentSchedule]);
   const byHour = new Map<number, Card>();
   dayCards.forEach((c) => {
     if (!c.scheduled_time) return;
@@ -93,12 +102,14 @@ export function HourlySchedule({
           hour={h}
           card={byHour.get(h) ?? null}
           isDropTarget={overHour === h}
-          onDragOver={(e) => { if (dragCardId) { e.preventDefault(); setOverHour(h); } }}
+          onDragOver={(e) => { if (dragItem) { e.preventDefault(); setOverHour(h); } }}
           onDragLeave={() => setOverHour((o) => (o === h ? null : o))}
           onDrop={(e) => {
             e.preventDefault();
-            if (dragCardId) onUpdateCard(dragCardId, { date: dateISO, scheduled_time: `${String(h).padStart(2, "0")}:00` });
-            onDragCardChange(null);
+            const hh = `${String(h).padStart(2, "0")}:00`;
+            if (dragItem?.kind === "card") onUpdateCard(dragItem.id, { date: dateISO, scheduled_time: hh });
+            else if (dragItem?.kind === "payment" && onSchedulePayment) onSchedulePayment(dragItem.billId, dateISO, hh);
+            onDragItemChange(null);
             setOverHour(null);
           }}
           onOpenCard={onOpenCard}

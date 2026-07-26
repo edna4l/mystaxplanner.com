@@ -49,6 +49,19 @@ export interface Tweaks {
   // overdue bill stays honestly overdue everywhere else in the app;
   // it's just excluded from today's review queue until that date.
   snoozedBills: Record<string, string>;
+
+  // Planner "Financial actions" preferences (src/lib/plannerData.ts,
+  // planner-plan.tsx, and the bill editor's Planner section in
+  // expanded-card.tsx). All keyed by bill card id. Never touches the
+  // bill's own date/scheduled_time — a bill's due date stays accurate
+  // everywhere else in the app no matter what's set here.
+  hiddenFromPlanner: string[]; // "Do not show in Planner" — never appears as a financial action
+  remindOnDueDate: string[]; // suppresses the early due-soon warning; only surfaces on/after the due date
+  forcedPlannerBills: string[]; // "Add payment task to Planner" — shows now even if not due soon (e.g. autopay bills you still want to review)
+  // "Schedule payment" / dragging a financial-action chip onto an hour
+  // — when this bill's payment gets done, independent of when it's
+  // actually due.
+  paymentSchedule: Record<string, { date: string; time: string }>;
 }
 
 export const TWEAK_DEFAULTS: Tweaks = {
@@ -67,6 +80,10 @@ export const TWEAK_DEFAULTS: Tweaks = {
   boardView: "Stacks",
   dismissedSuggestions: [],
   snoozedBills: {},
+  hiddenFromPlanner: [],
+  remindOnDueDate: [],
+  forcedPlannerBills: [],
+  paymentSchedule: {},
 };
 
 const PALETTE = {

@@ -6,7 +6,7 @@ import { useProfile } from "@/lib/useProfile";
 import type { BoardSlot, Card, Profile } from "@/lib/types";
 import type { ParsedQuickAdd } from "@/lib/quickAdd";
 import { isVirtualId, parseVirtualId } from "@/lib/recurrence";
-import { applyTheme, applyBrand, applyTypeHues } from "@/lib/theme";
+import { applyTheme, applyBrand, applyTypeHues, TWEAK_DEFAULTS } from "@/lib/theme";
 import { computeTodaySummary } from "@/lib/todaySummary";
 import { todayISO } from "@/lib/date";
 import { Topbar, type AppView } from "@/components/topbar";
@@ -136,6 +136,57 @@ export default function HomeClient() {
     if (!open || open.kind !== "fan") return null;
     return board.find((s) => s.id === open.slotId) ?? null;
   }, [open, board]);
+
+  // Planner preferences (Financial Actions — see planner-plan.tsx and
+  // src/lib/plannerData.ts) are keyed by the *series root* id (or the
+  // bill's own id for a one-off), matching how financialActions()
+  // groups a recurring series into one action — "hide this from
+  // Planner" should apply to the whole series, not just one month's
+  // row. A scheduled payment, by contrast, is keyed by the specific
+  // occurrence's own id (its virtual id is stable per date), since
+  // when you'll actually pay a given month's bill is naturally
+  // per-occurrence.
+  const openCardBillRootId = useMemo(() => {
+    if (!openCard || openCard.type !== "bill") return null;
+    if (openCard.recur_freq) return openCard.id;
+    if (openCard.origin) return openCard.origin;
+    return openCard.id;
+  }, [openCard]);
+  const openCardPlannerPrefs = useMemo(() => {
+    if (!openCardBillRootId || !profile) return undefined;
+    const t = profile.tweaks;
+    return {
+      hidden: t.hiddenFromPlanner.includes(openCardBillRootId),
+      remind: t.remindOnDueDate.includes(openCardBillRootId),
+      forced: t.forcedPlannerBills.includes(openCardBillRootId),
+    };
+  }, [openCardBillRootId, profile]);
+  const openCardScheduledPayment = useMemo(() => {
+    if (!openCard || openCard.type !== "bill" || !profile) return null;
+    return profile.tweaks.paymentSchedule[openCard.id] ?? null;
+  }, [openCard, profile]);
+
+  function handleTogglePlannerPref(key: "hidden" | "remind" | "forced", value: boolean) {
+    if (!openCardBillRootId || !profile) return;
+    const t = profile.tweaks;
+    if (key === "hidden") {
+      updateTweaks({ hiddenFromPlanner: value ? [...t.hiddenFromPlanner, openCardBillRootId] : t.hiddenFromPlanner.filter((id) => id !== openCardBillRootId) });
+    } else if (key === "remind") {
+      updateTweaks({ remindOnDueDate: value ? [...t.remindOnDueDate, openCardBillRootId] : t.remindOnDueDate.filter((id) => id !== openCardBillRootId) });
+    } else {
+      updateTweaks({ forcedPlannerBills: value ? [...t.forcedPlannerBills, openCardBillRootId] : t.forcedPlannerBills.filter((id) => id !== openCardBillRootId) });
+    }
+  }
+  function handleSchedulePayment(date: string, time: string) {
+    if (!openCard || !profile) return;
+    updateTweaks({ paymentSchedule: { ...profile.tweaks.paymentSchedule, [openCard.id]: { date, time } } });
+  }
+  function handleClearScheduledPayment() {
+    if (!openCard || !profile) return;
+    const next = { ...profile.tweaks.paymentSchedule };
+    delete next[openCard.id];
+    updateTweaks({ paymentSchedule: next });
+  }
 
   const dayFan = useMemo(() => {
     if (!open || open.kind !== "dayfan") return null;
@@ -447,8 +498,10 @@ export default function HomeClient() {
       ) : view === "planner" ? (
         <PlannerView
           board={board}
+          tweaks={profile?.tweaks ?? TWEAK_DEFAULTS}
           onOpenCard={openCardHandler}
           onUpdateCard={handleUpdateCard}
+          onUpdateTweaks={updateTweaks}
           onGo={(dest) => setView(dest)}
           onStartFocusDeck={startFocusDeck}
           onOpenDailyReset={() => setDailyResetOpen(true)}
@@ -479,6 +532,11 @@ export default function HomeClient() {
           onStopRecurrence={handleStopRecurrence}
           skipped={openCardSkipped}
           onRestoreOccurrence={handleRestoreOccurrence}
+          plannerPrefs={openCardPlannerPrefs}
+          onTogglePlannerPref={handleTogglePlannerPref}
+          scheduledPayment={openCardScheduledPayment}
+          onSchedulePayment={handleSchedulePayment}
+          onClearScheduledPayment={handleClearScheduledPayment}
         />
       ) : null}
 
