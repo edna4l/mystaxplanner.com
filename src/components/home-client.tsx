@@ -429,6 +429,8 @@ export default function HomeClient() {
 
   return (
     <div className="app">
+      <div className="app-glow app-glow-a" aria-hidden="true" />
+      <div className="app-glow app-glow-b" aria-hidden="true" />
       <Topbar
         greeting={greeting}
         dateStr={dateStr}

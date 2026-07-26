@@ -102,10 +102,18 @@ const BG = {
   Cool: { bg: "oklch(0.966 0.009 248)", ink: "oklch(0.26 0.016 258)", panel: "oklch(0.995 0.004 250)", line: "oklch(0.9 0.012 248)" },
   Neutral: { bg: "oklch(0.972 0.001 0)", ink: "oklch(0.25 0.004 0)", panel: "oklch(0.998 0 0)", line: "oklch(0.9 0.002 0)" },
 };
+// Deep enough to read as the same "rich navy-black" family as the
+// login page (see src/app/login/login.module.css's `.page` background)
+// without going all the way to that page's near-black — this is a
+// data-dense app people look at for a while, not a marketing splash,
+// so a slightly softer floor keeps long sessions easier on the eyes
+// while still visually matching on first glance. Each bgTone keeps its
+// own hue lean (Warm/Cool/Neutral) — that axis is still a real user
+// preference, not something this change overrides.
 const DARK_BG = {
-  Warm: { bg: "oklch(0.205 0.011 70)", ink: "oklch(0.93 0.009 80)", panel: "oklch(0.255 0.013 70)", line: "oklch(0.34 0.013 70)" },
-  Cool: { bg: "oklch(0.205 0.014 260)", ink: "oklch(0.93 0.009 250)", panel: "oklch(0.255 0.016 260)", line: "oklch(0.34 0.016 260)" },
-  Neutral: { bg: "oklch(0.2 0.002 0)", ink: "oklch(0.94 0.002 0)", panel: "oklch(0.25 0.003 0)", line: "oklch(0.34 0.004 0)" },
+  Warm: { bg: "oklch(0.155 0.013 70)", ink: "oklch(0.94 0.009 80)", panel: "oklch(0.195 0.015 70)", line: "oklch(0.3 0.015 70)" },
+  Cool: { bg: "oklch(0.14 0.017 260)", ink: "oklch(0.94 0.009 250)", panel: "oklch(0.185 0.019 260)", line: "oklch(0.29 0.019 260)" },
+  Neutral: { bg: "oklch(0.14 0.003 0)", ink: "oklch(0.95 0.002 0)", panel: "oklch(0.185 0.004 0)", line: "oklch(0.29 0.005 0)" },
 };
 const DENSITY = { Compact: { s: 142, g: 12 }, Regular: { s: 168, g: 16 }, Comfy: { s: 196, g: 20 } };
 const GRADIENT_INTENSITY = {
@@ -225,6 +233,18 @@ export const ACCENTS = [
 export function applyBrand(hue: number | null | undefined, dark: boolean) {
   const r = document.documentElement;
   if (hue == null) {
+    if (dark) {
+      // No custom accent picked — dark mode's default brand becomes the
+      // same purple-to-blue pairing as the login page (see
+      // login.module.css's .primaryButton gradient), so the two-stop
+      // gradient buttons below (.add-btn etc.) match it out of the box.
+      // Picking a color in Settings > Colors overrides this via the
+      // branch below, same as it always has.
+      r.style.setProperty("--brand", "oklch(0.62 0.19 300)");
+      r.style.setProperty("--brand-soft", "oklch(0.6 0.17 262)");
+      r.style.setProperty("--brand-ink", "#fff");
+      return;
+    }
     r.style.removeProperty("--brand");
     r.style.removeProperty("--brand-soft");
     r.style.removeProperty("--brand-ink");

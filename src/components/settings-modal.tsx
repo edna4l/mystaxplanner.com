@@ -108,6 +108,10 @@ export function SettingsModal({
     onSaveProfile({ accent: hue });
     applyBrand(hue, dark);
   }
+  function resetAccent() {
+    onSaveProfile({ accent: null });
+    applyBrand(null, dark);
+  }
   function saveName() {
     onSaveProfile(draft);
   }
@@ -147,6 +151,17 @@ export function SettingsModal({
             <span className="ob-label">Accent color</span>
             <AccentRow value={profile.accent} onPick={pickAccent} />
             <HueWheel value={profile.accent ?? 0} onChange={pickAccent} />
+            {profile.accent != null ? (
+              <button className="ob-linklike" onClick={resetAccent}>
+                Reset to default {dark ? "(login purple/blue)" : ""}
+              </button>
+            ) : (
+              <span className="ob-hint">
+                {dark
+                  ? "Using the default purple/blue accent (same as the login page). Pick a color above to override it."
+                  : "No accent picked yet — primary buttons use a neutral color until you pick one."}
+              </span>
+            )}
           </div>
           <div className="ob-section">
             <span className="ob-label">Card colors</span>

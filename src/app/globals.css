@@ -150,6 +150,8 @@ input, textarea { font-family: inherit; }
 .hue-wheel::-moz-range-track { height: 14px; border-radius: 999px; }
 
 .ob-hint { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.ob-linklike { align-self: flex-start; border: none; background: transparent; color: var(--ink); font-weight: 600; font-size: 12.5px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 2px 0; }
+.ob-linklike:hover { opacity: 0.75; }
 
 /* appearance / profile popover */
 .ap-overlay { padding-top: 12vh; align-items: start; }
@@ -1307,12 +1309,112 @@ input, textarea { font-family: inherit; }
 .auth-overlay { position: fixed; }
 .auth-form { display: flex; flex-direction: column; gap: 16px; margin-top: 4px; }
 .auth-field { display: flex; flex-direction: column; gap: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-.auth-field input { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 12px; padding: 13px 15px; font-size: 15px; outline: none; text-transform: none; letter-spacing: normal; font-weight: 400; transition: border-color .14s ease; }
+.auth-field input { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 12px; padding: 13px 15px; font-size: 15px; outline: none; text-transform: none; letter-spacing: normal; font-weight: 400; transition: border-color .14s ease; width: 100%; }
 .auth-field input:focus { border-color: var(--ink); }
+.auth-field input:focus-visible { outline: 2px solid oklch(0.6 0.15 280); outline-offset: 1px; }
 .auth-error { font-size: 13px; color: oklch(0.55 0.16 25); margin: 0; }
 .auth-info { font-size: 13px; color: oklch(0.5 0.12 150); margin: 0; }
-.auth-switch { font-size: 13.5px; color: var(--muted); margin-top: 18px; text-align: center; }
-.auth-switch a { color: var(--ink); font-weight: 600; }
+
+/* Two-column login/signup shell: branded panel + auth panel on desktop,
+   stacked with the illustration on top on mobile. */
+.auth-shell { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); }
+.auth-panel { display: flex; align-items: center; justify-content: center; padding: 40px clamp(20px, 5vw, 64px); background: var(--bg); }
+.auth-card { width: 100%; max-width: 400px; }
+.auth-card .ob-logo { display: none; }
+.auth-password-row { position: relative; }
+.auth-password-row input { padding-right: 44px; }
+.auth-eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: none; background: transparent; color: var(--muted); padding: 8px; border-radius: 8px; display: grid; place-items: center; cursor: pointer; }
+.auth-eye:hover { color: var(--ink); background: var(--faint); }
+.auth-eye:focus-visible { outline: 2px solid oklch(0.6 0.15 280); outline-offset: 1px; }
+.auth-row { display: flex; align-items: center; justify-content: space-between; margin-top: -6px; }
+.auth-check { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); cursor: pointer; }
+.auth-check input { accent-color: oklch(0.56 0.16 280); width: 15px; height: 15px; }
+.auth-link-btn { border: none; background: transparent; color: var(--muted); font-size: 13.5px; font-weight: 600; cursor: pointer; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
+.auth-link-btn:hover { color: var(--ink); }
+.auth-link-btn:focus-visible { outline: 2px solid oklch(0.6 0.15 280); outline-offset: 2px; border-radius: 4px; }
+.auth-link-inline { margin: 0; }
+.auth-link-center { display: block; margin: 14px auto 0; text-align: center; }
+.auth-submit {
+  border: none; border-radius: 999px; padding: 14px 26px; font-size: 15px; font-weight: 700; color: #fff; cursor: pointer;
+  background: linear-gradient(135deg, oklch(0.58 0.19 300), oklch(0.56 0.18 265));
+  box-shadow: 0 12px 28px -10px oklch(0.5 0.19 285 / 0.55);
+  transition: transform .14s ease, box-shadow .14s ease, opacity .14s ease;
+}
+.auth-submit:hover { transform: translateY(-1px); box-shadow: 0 16px 32px -10px oklch(0.5 0.19 285 / 0.65); }
+.auth-submit:disabled { opacity: 0.7; cursor: default; transform: none; }
+.auth-submit:focus-visible { outline: 2px solid oklch(0.85 0.05 285); outline-offset: 2px; }
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 18px 0; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.auth-google {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 14.5px; font-weight: 600;
+  padding: 12px 18px; border-radius: 999px; cursor: pointer; transition: border-color .14s ease, background .14s ease;
+}
+.auth-google:hover { border-color: var(--ink); }
+.auth-google:disabled { opacity: 0.6; cursor: default; }
+.auth-google:focus-visible { outline: 2px solid oklch(0.6 0.15 280); outline-offset: 2px; }
+.auth-cta-btn {
+  display: block; margin-top: 22px; text-align: center; font-size: 13.5px; font-weight: 700; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 999px; padding: 12px 18px; text-decoration: none; transition: border-color .14s ease, background .14s ease;
+}
+.auth-cta-btn:hover { border-color: var(--ink); background: var(--faint); }
+.auth-cta-btn:focus-visible { outline: 2px solid oklch(0.6 0.15 280); outline-offset: 2px; }
+
+/* Branded visual panel — fixed dark purple/blue treatment regardless of
+   the visitor's app theme (no session yet, so no preference to read). */
+.auth-visual {
+  position: relative; overflow: hidden; display: flex; align-items: center; padding: 56px clamp(28px, 5vw, 72px);
+  background: radial-gradient(120% 140% at 15% 0%, #2a2450 0%, #1a1730 45%, #12111f 100%);
+  color: #eee9fb;
+}
+.auth-visual-glow {
+  position: absolute; inset: -20% -10%; pointer-events: none;
+  background:
+    radial-gradient(38% 32% at 78% 18%, oklch(0.62 0.19 300 / 0.35) 0%, transparent 70%),
+    radial-gradient(30% 28% at 15% 78%, oklch(0.55 0.18 255 / 0.3) 0%, transparent 70%);
+  filter: blur(4px);
+}
+.auth-visual-inner { position: relative; z-index: 1; max-width: 480px; }
+.auth-visual-logo { display: flex; align-items: center; gap: 8px; margin-bottom: 40px; }
+.auth-visual-logo .logo-sq { background: #d8d2f5; }
+.auth-visual-logo .logo-sq:nth-child(2) { background: oklch(0.68 0.15 300); }
+.auth-visual-word { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: -0.01em; color: #d8d2f5; }
+.auth-visual-headline { font-family: var(--font-display); font-weight: 700; font-size: clamp(28px, 3.4vw, 40px); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 16px; color: #f4f1fc; }
+.auth-visual-grad { background: linear-gradient(120deg, oklch(0.75 0.16 300), oklch(0.72 0.15 255)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.auth-visual-desc { font-size: 15px; line-height: 1.55; color: #bcb4dc; margin: 0 0 26px; max-width: 40ch; }
+.auth-visual-points { list-style: none; margin: 0 0 40px; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.auth-visual-points li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #d8d2f0; }
+.auth-visual-dot { width: 7px; height: 7px; border-radius: 50%; background: oklch(0.72 0.16 295); flex: none; box-shadow: 0 0 10px oklch(0.72 0.16 295 / 0.7); }
+
+.auth-visual-cards { position: relative; height: 220px; }
+.avc {
+  position: absolute; background: color-mix(in oklab, #2a2650 78%, transparent); border: 1px solid color-mix(in oklab, #eee9fb 14%, transparent);
+  border-radius: 14px; padding: 12px 14px; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 20px 40px -16px rgba(0,0,0,.5);
+  display: flex; flex-direction: column; gap: 6px; width: 190px;
+}
+.avc-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #a89fd6; }
+.avc-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; color: #ece8f9; }
+.avc-row .mono { color: #b6aede; font-size: 11px; }
+.avc-bills { top: 0; left: 0; transform: rotate(-4deg); z-index: 2; }
+.avc-summary { top: 18px; right: 0; width: 176px; flex-direction: row; align-items: center; transform: rotate(3deg); z-index: 3; }
+.avc-habits { bottom: 6px; left: 30px; transform: rotate(3deg); z-index: 1; }
+.avc-schedule { bottom: -6px; right: 12px; width: 176px; transform: rotate(-2deg); z-index: 2; }
+.avc-ring {
+  --pct: 0; width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #f4f1fc;
+  background: conic-gradient(oklch(0.72 0.16 295) calc(var(--pct) * 1%), color-mix(in oklab, #eee9fb 18%, transparent) 0);
+}
+.avc-ring span { background: #221f42; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; }
+.avc-summary-copy { display: flex; flex-direction: column; gap: 2px; }
+.avc-summary-copy .avc-sub { font-size: 11px; color: #b6aede; }
+
+@media (max-width: 900px) {
+  .auth-shell { grid-template-columns: 1fr; }
+  .auth-visual { padding: 40px 24px 32px; }
+  .auth-visual-cards { display: none; }
+  .auth-visual-points { margin-bottom: 8px; }
+  .auth-visual-desc { max-width: none; }
+  .auth-panel { padding: 32px 20px 48px; }
+}
 
 /* Mobile: iOS Safari auto-zooms the page on focusing any input/select
    under 16px — these are the app's actual text/date/number fields and
@@ -1321,6 +1423,126 @@ input, textarea { font-family: inherit; }
 @media (max-width: 640px) {
   .inp, .bsort, .bsearch, .daily-reset-date, .create-name, .auth-field input, .brow-amt-input {
     font-size: 16px;
+  }
+}
+
+/* ---------- Dark-mode brand chrome ----------
+   Brings the rest of the app's Dark mode into the same visual family as
+   the login page (login.module.css) — gradient + glow primary buttons,
+   a matching input focus glow — without touching Light mode or the
+   per-card-type accent colors (bill/task/habit/etc. hues), which stay
+   exactly as customizable as before. Everything here is driven by the
+   existing --brand/--brand-soft tokens (see applyBrand in theme.ts):
+   picking a color in Settings > Colors changes this gradient's colors
+   too, it just defaults to the login's purple-to-blue when no accent
+   has been chosen. */
+[data-appearance="dark"] .add-btn,
+[data-appearance="dark"] .mm-row.primary,
+[data-appearance="dark"] .today-quick,
+[data-appearance="dark"] .review-plan,
+[data-appearance="dark"] .cover-add-btn,
+[data-appearance="dark"] .import-merge {
+  background: linear-gradient(135deg, var(--brand, oklch(0.62 0.19 300)) 0%, var(--brand-soft, oklch(0.6 0.17 262)) 100%);
+  box-shadow: 0 12px 26px -10px color-mix(in oklab, var(--brand, oklch(0.62 0.19 300)) 60%, transparent);
+}
+[data-appearance="dark"] .add-btn:hover,
+[data-appearance="dark"] .mm-row.primary:hover,
+[data-appearance="dark"] .today-quick:hover,
+[data-appearance="dark"] .review-plan:hover,
+[data-appearance="dark"] .cover-add-btn:hover,
+[data-appearance="dark"] .import-merge:hover {
+  filter: brightness(1.08);
+}
+
+/* Quick add is the first button most people's eyes land on in the
+   topbar, but it was never wired to --brand at all (plain outline
+   style) — given its own rules rather than folded into the list above
+   since, unlike those, it also needs its label/icon text recolored to
+   read against a solid gradient instead of a transparent background. */
+[data-appearance="dark"] .quick-add-btn {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--brand, oklch(0.62 0.19 300)) 0%, var(--brand-soft, oklch(0.6 0.17 262)) 100%);
+  color: #fff;
+  box-shadow: 0 10px 22px -10px color-mix(in oklab, var(--brand, oklch(0.62 0.19 300)) 55%, transparent);
+}
+[data-appearance="dark"] .quick-add-btn:hover {
+  border-color: transparent;
+  color: #fff;
+  filter: brightness(1.08);
+}
+[data-appearance="dark"] .quick-add-btn .qa-plus,
+[data-appearance="dark"] .quick-add-btn .qa-label {
+  color: #fff;
+}
+[data-appearance="dark"] .quick-add-btn .qa-key {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
+[data-appearance="dark"] .avatar {
+  background: linear-gradient(135deg, var(--brand, oklch(0.62 0.19 300)) 0%, var(--brand-soft, oklch(0.6 0.17 262)) 100%);
+}
+
+[data-appearance="dark"] .inp,
+[data-appearance="dark"] .bsearch,
+[data-appearance="dark"] .create-name,
+[data-appearance="dark"] .auth-field input {
+  border-color: color-mix(in oklab, var(--line) 60%, var(--ink) 25%);
+}
+[data-appearance="dark"] .inp:focus,
+[data-appearance="dark"] .bsearch:focus,
+[data-appearance="dark"] .create-name:focus,
+[data-appearance="dark"] .auth-field input:focus {
+  box-shadow:
+    0 0 0 4px color-mix(in oklab, var(--accent, var(--brand, oklch(0.62 0.19 300))) 22%, transparent),
+    0 0 20px color-mix(in oklab, var(--accent, var(--brand, oklch(0.62 0.19 300))) 35%, transparent);
+}
+
+/* Two soft, slow-breathing color blobs pinned to opposite corners of the
+   viewport — the same technique as the login page's .ambientGlowOne/Two
+   (a solid color blurred into a glow via `filter: blur()`, not a
+   gradient). Fixed + negative z-index so they sit behind all in-flow
+   app content without needing to touch .app's own stacking context;
+   panels/cards are opaque (--panel), so the glow only shows through in
+   the gaps around them, same as it does around the login card. Colored
+   from the same --brand/--brand-soft tokens as the buttons above, so a
+   custom accent choice carries through here too. */
+.app-glow {
+  position: fixed;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 999px;
+  filter: blur(110px);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+[data-appearance="dark"] .app-glow {
+  opacity: 1;
+  animation: appGlowPulse 11s ease-in-out infinite;
+}
+.app-glow-a {
+  top: -180px;
+  left: -140px;
+  width: 480px;
+  height: 480px;
+  background: color-mix(in oklab, var(--brand, oklch(0.62 0.19 300)) 55%, transparent);
+}
+.app-glow-b {
+  bottom: -200px;
+  right: -160px;
+  width: 520px;
+  height: 520px;
+  background: color-mix(in oklab, var(--brand-soft, oklch(0.6 0.17 262)) 50%, transparent);
+  animation-delay: -5.5s;
+}
+@keyframes appGlowPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-appearance="dark"] .app-glow {
+    animation: none;
+    opacity: 0.65;
   }
 }
 
